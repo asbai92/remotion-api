@@ -1,0 +1,16 @@
+{
+  "name": "remotion-api",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js",
+    "build": "npx remotion bundle src/index.ts out/bundle.js"
+  },
+  "dependencies": {
+    "@remotion/cli": "latest",
+    "@remotion/renderer": "latest",
+    "express": "latest",
+    "remotion": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  }
+}
