@@ -6,10 +6,11 @@ const fs = require('fs');
 const app = express();
 app.use(express.json());
 
-// CONFIGURATION DU CHEMIN
+// CONFIGURATION DES CHEMINS (Utilisation de path.resolve pour garantir le serveUrl)
 const bundlePath = path.resolve(__dirname, 'build', 'bundle.js');
 const outDir = path.resolve(__dirname, 'out');
 
+// Initialisation du dossier de sortie
 if (!fs.existsSync(outDir)) {
     console.log(`[INIT] Création du dossier de sortie : ${outDir}`);
     fs.mkdirSync(outDir, { recursive: true });
@@ -23,22 +24,17 @@ app.post('/render', async (req, res) => {
         const { id, inputProps } = req.body;
         const compId = id || 'HelloWorld';
 
-        // 1. Vérification du bundle
-        console.log(`[${requestId}] ÉTAPE 1 : Vérification du bundle à ${bundlePath}`);
+        // 1. Vérification physique du fichier (Indispensable pour le serveUrl)
         if (!fs.existsSync(bundlePath)) {
-            console.error(`[${requestId}] ERREUR : Bundle introuvable !`);
-            return res.status(500).json({ 
-                error: "Bundle introuvable", 
-                pathChecked: bundlePath,
-                filesInApp: fs.readdirSync(__dirname) // Aide à voir ce qui existe à la racine
-            });
+            console.error(`[${requestId}] ERREUR : Le bundle est introuvable à ${bundlePath}`);
+            return res.status(500).json({ error: "Le fichier bundle.js n'existe pas dans le dossier build." });
         }
-        console.log(`[${requestId}] SUCCESS : Bundle détecté.`);
 
         // 2. Sélection de la composition
-        console.log(`[${requestId}] ÉTAPE 2 : Sélection de la composition '${compId}'`);
+        // On passe 'bundlePath' comme paramètre 'bundle' (équivalent du serveUrl)
+        console.log(`[${requestId}] ÉTAPE 2 : Chargement de la composition '${compId}'`);
         const composition = await selectComposition({
-            bundle: bundlePath,
+            bundle: bundlePath, 
             id: compId,
             inputProps: inputProps || {},
         });
@@ -47,27 +43,25 @@ app.post('/render', async (req, res) => {
         // 3. Préparation du rendu
         const outputName = `video-${requestId}.mp4`;
         const outputLocation = path.join(outDir, outputName);
-        console.log(`[${requestId}] ÉTAPE 3 : Lancement du rendu vers ${outputLocation}`);
 
-        // 4. Rendu média
+        // 4. Rendu média (Utilisation stricte du serveUrl comme dans la doc)
+        console.log(`[${requestId}] ÉTAPE 3 : Lancement du rendu...`);
         await renderMedia({
             composition,
-            serveUrl: bundlePath,
+            serveUrl: bundlePath, // <-- C'est ici que la doc insiste
             codec: 'h264',
             outputLocation: outputLocation,
+            inputProps: inputProps || {},
             chromiumOptions: {
-                executablePath: process.env.REMOTION_CHROME_EXECUTABLE || '/usr/bin/chromium',
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
+                // On laisse Remotion gérer le binaire installé par 'npx remotion browser install'
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
             },
             onProgress: ({ progress }) => {
-                // Log de progression toutes les 25% pour ne pas surcharger les logs
-                if ((progress * 100) % 25 === 0) {
-                    console.log(`[${requestId}] PROGRESSION : ${Math.round(progress * 100)}%`);
-                }
+                console.log(`[${requestId}] PROGRESSION : ${Math.round(progress * 100)}%`);
             }
         });
 
-        console.log(`[${requestId}] ÉTAPE 4 : Rendu terminé avec succès.`);
+        console.log(`[${requestId}] ÉTAPE 4 : Vidéo générée avec succès.`);
         
         res.json({ 
             success: true, 
@@ -76,22 +70,12 @@ app.post('/render', async (req, res) => {
         });
 
     } catch (e) {
-        console.error(`[${requestId}] ERREUR CRITIQUE durant le rendu :`, e.stack);
+        console.error(`[${requestId}] ERREUR CRITIQUE :`, e.message);
         res.status(500).json({ 
             error: e.message, 
             stack: e.stack,
-            requestId: requestId 
+            suggestion: "Vérifiez que les dépendances Linux sont bien installées dans le Dockerfile."
         });
-    }
-});
-
-// Route de debug pour voir le contenu du dossier build à tout moment
-app.get('/debug-build', (req, res) => {
-    const buildFolder = path.join(__dirname, 'build');
-    if (fs.existsSync(buildFolder)) {
-        res.json({ folder: 'build', files: fs.readdirSync(buildFolder) });
-    } else {
-        res.json({ error: 'Dossier build inexistant' });
     }
 });
 
@@ -100,8 +84,7 @@ app.use('/out', express.static(outDir));
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`---------------------------------------------------`);
-    console.log(`SERVEUR ACTIF SUR PORT ${PORT}`);
-    console.log(`Bundle attendu : ${bundlePath}`);
-    console.log(`Dossier sortie : ${outDir}`);
+    console.log(`SERVEUR REMOTION PRÊT`);
+    console.log(`ServeUrl (Bundle) : ${bundlePath}`);
     console.log(`---------------------------------------------------`);
 });
