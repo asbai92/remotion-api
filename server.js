@@ -1,4 +1,5 @@
 const express = require('express');
+const { bundle } = require('@remotion/bundler');
 const { renderMedia, selectComposition } = require('@remotion/renderer');
 const path = require('path');
 const fs = require('fs');
@@ -6,85 +7,63 @@ const fs = require('fs');
 const app = express();
 app.use(express.json());
 
-// CONFIGURATION DES CHEMINS (Utilisation de path.resolve pour garantir le serveUrl)
-const bundlePath = path.resolve(__dirname, 'build', 'bundle.js');
-const outDir = path.resolve(__dirname, 'out');
+let bundled = null; // Contiendra le chemin du bundle une fois prêt
 
-// Initialisation du dossier de sortie
-if (!fs.existsSync(outDir)) {
-    console.log(`[INIT] Création du dossier de sortie : ${outDir}`);
-    fs.mkdirSync(outDir, { recursive: true });
-}
+// INITIALISATION : On crée le bundle au démarrage du serveur
+const initBundle = async () => {
+    console.log("[INIT] Création du bundle Remotion...");
+    bundled = await bundle({
+        entryPoint: path.resolve(__dirname, './src/index.tsx'), // Vérifie bien .tsx ou .ts
+        webpackOverride: (config) => config,
+    });
+    console.log("[INIT] Bundle prêt !");
+};
+
+initBundle().catch(console.error);
 
 app.post('/render', async (req, res) => {
-    const requestId = Date.now();
-    console.log(`[${requestId}] REQUÊTE REÇUE :`, JSON.stringify(req.body));
+    if (!bundled) return res.status(503).json({ error: "Le bundle n'est pas encore prêt." });
 
+    const requestId = Date.now();
     try {
         const { id, inputProps } = req.body;
-        const compId = id || 'HelloWorld';
+        const compositionId = id || 'HelloWorld';
 
-        // 1. Vérification physique du fichier (Indispensable pour le serveUrl)
-        if (!fs.existsSync(bundlePath)) {
-            console.error(`[${requestId}] ERREUR : Le bundle est introuvable à ${bundlePath}`);
-            return res.status(500).json({ error: "Le fichier bundle.js n'existe pas dans le dossier build." });
-        }
-
-        // 2. Sélection de la composition
-        // On passe 'bundlePath' comme paramètre 'bundle' (équivalent du serveUrl)
-        console.log(`[${requestId}] ÉTAPE 2 : Chargement de la composition '${compId}'`);
+        // 1. Sélection de la composition
         const composition = await selectComposition({
-            bundle: bundlePath, 
-            id: compId,
+            serveUrl: bundled,
+            id: compositionId,
             inputProps: inputProps || {},
         });
-        console.log(`[${requestId}] SUCCESS : Composition chargée.`);
 
-        // 3. Préparation du rendu
         const outputName = `video-${requestId}.mp4`;
-        const outputLocation = path.join(outDir, outputName);
+        const outputLocation = path.resolve(__dirname, 'out', outputName);
 
-        // 4. Rendu média (Utilisation stricte du serveUrl comme dans la doc)
-        console.log(`[${requestId}] ÉTAPE 3 : Lancement du rendu...`);
+        // 2. Rendu (Options recommandées par la doc 2024)
+        console.log(`[${requestId}] Rendu en cours : ${compositionId}`);
         await renderMedia({
-            composition,
-            serveUrl: bundlePath, // <-- C'est ici que la doc insiste
             codec: 'h264',
+            composition,
+            serveUrl: bundled,
             outputLocation: outputLocation,
-            inputProps: inputProps || {},
             chromiumOptions: {
-                // On laisse Remotion gérer le binaire installé par 'npx remotion browser install'
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                enableMultiProcessOnLinux: true, // RECOMMANDÉ PAR LA DOC
             },
-            onProgress: ({ progress }) => {
-                console.log(`[${requestId}] PROGRESSION : ${Math.round(progress * 100)}%`);
-            }
+            inputProps: inputProps || {},
         });
 
-        console.log(`[${requestId}] ÉTAPE 4 : Vidéo générée avec succès.`);
-        
         res.json({ 
             success: true, 
-            url: `https://api-video.mohamedasb.com/out/${outputName}`,
-            requestId: requestId 
+            url: `https://api-video.mohamedasb.com/out/${outputName}` 
         });
 
     } catch (e) {
-        console.error(`[${requestId}] ERREUR CRITIQUE :`, e.message);
-        res.status(500).json({ 
-            error: e.message, 
-            stack: e.stack,
-            suggestion: "Vérifiez que les dépendances Linux sont bien installées dans le Dockerfile."
-        });
+        console.error("Erreur:", e.message);
+        res.status(500).json({ error: e.message });
     }
 });
 
-app.use('/out', express.static(outDir));
+app.use('/out', express.static(path.resolve(__dirname, 'out')));
 
 const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`---------------------------------------------------`);
-    console.log(`SERVEUR REMOTION PRÊT`);
-    console.log(`ServeUrl (Bundle) : ${bundlePath}`);
-    console.log(`---------------------------------------------------`);
-});
+app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
