@@ -1,24 +1,38 @@
-FROM node:20-bookworm-slim
+# 1. Utilisation d'une image Node légère et stable
+FROM docker.io/library/node:20-bookworm-slim
 
-# Installation des dépendances pour le rendu (Chromium, FFmpeg)
+# 2. Installation des dépendances système (Chromium pour le rendu, FFmpeg pour la vidéo)
 RUN apt-get update && apt-get install -y \
-    chromium ffmpeg fonts-freefont-ttf \
+    chromium \
+    ffmpeg \
+    fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
 
+# 3. Définition du dossier de travail
 WORKDIR /app
 
-# Installation des paquets
+# 4. Installation des dépendances du projet
 COPY package*.json ./
 RUN npm install
 
-# Copie du code
+# 5. Copie de tout le code source
 COPY . .
 
-RUN npx remotion bundle src/index.tsx ./bundle.js
-# ------------------------------
+# 6. GÉNÉRATION DU BUNDLE (Étape cruciale)
+# On lance le bundle. Remotion crée par défaut un dossier nommé "build".
+RUN npx remotion bundle src/index.tsx
 
-# Configuration de l'environnement
+# 7. NETTOYAGE ET MISE EN PLACE (Meilleure pratique)
+# On déplace le fichier généré vers la racine et on le nomme 'bundle.js'
+# Cela garantit que le serveur le trouvera à l'adresse /app/bundle.js
+RUN mv build/index.js ./bundle.js || mv build/bundle.js ./bundle.js
+
+# On supprime le dossier build maintenant inutile pour garder le serveur propre
+RUN rm -rf build
+
+# 8. Configuration de l'environnement pour Chromium
 ENV REMOTION_CHROME_EXECUTABLE=/usr/bin/chromium
-EXPOSE 3000
 
+# 9. Exposition du port et lancement du serveur
+EXPOSE 3000
 CMD ["npm", "start"]
