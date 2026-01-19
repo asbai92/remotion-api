@@ -14,8 +14,7 @@ RUN npm install
 # Copie du code
 COPY . .
 
-# Cette commande transforme ton code React en un seul fichier optimisé pour le rendu
-RUN npx remotion bundle src/index.tsx bundle.js
+RUN npx remotion bundle src/index.tsx ./bundle.js
 # ------------------------------
 
 # Configuration de l'environnement
