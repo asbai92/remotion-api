@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 
 // CONFIGURATION DU CHEMIN
-const bundlePath = path.resolve(__dirname, 'build', 'index.js');
+const bundlePath = path.resolve(__dirname, 'build', 'bundle.js');
 const outDir = path.resolve(__dirname, 'out');
 
 if (!fs.existsSync(outDir)) {
