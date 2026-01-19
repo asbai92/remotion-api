@@ -1,24 +1,25 @@
 FROM docker.io/library/node:20-bookworm-slim
 
-# Installation des dépendances système
+# On garde FFmpeg et les polices, mais on n'a plus besoin de 'chromium' système
 RUN apt-get update && apt-get install -y \
-    chromium ffmpeg fonts-freefont-ttf \
+    ffmpeg fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Installation des paquets
 COPY package*.json ./
 RUN npm install
 
-# Copie du code
+# --- AJOUT CRUCIAL ---
+# On force Remotion à télécharger son Chrome Headless Shell dès maintenant
+RUN npx remotion browser install
+# ---------------------
+
 COPY . .
 
-# Commande par défaut : génère le dossier /app/build/
-RUN npx remotion bundle src/index.tsx
+RUN npx remotion bundle src/index.tsx build/bundle.js
 
-# Configuration environnement
-ENV REMOTION_CHROME_EXECUTABLE=/usr/bin/chromium
+# On SUPPRIME la ligne ENV REMOTION_CHROME_EXECUTABLE car on veut laisser Remotion choisir le sien
 EXPOSE 3000
 
 CMD ["npm", "start"]
