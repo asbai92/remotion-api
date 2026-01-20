@@ -83,6 +83,49 @@ app.post('/render', async (req, res) => {
     }
 });
 
+// 1. GET : Lister toutes les vidéos présentes
+app.get('/videos', (req, res) => {
+    fs.readdir(outDir, (err, files) => {
+        if (err) {
+            return res.status(500).json({ error: "Impossible de lire le dossier out" });
+        }
+
+        // On ne garde que les fichiers .mp4
+        const videos = files
+            .filter(file => file.endsWith('.mp4'))
+            .map(file => ({
+                name: file,
+                url: `${BASE_URL}/out/${file}`,
+                size: fs.statSync(path.join(outDir, file)).size,
+                createdAt: fs.statSync(path.join(outDir, file)).birthtime
+            }));
+
+        res.json({ count: videos.length, videos });
+    });
+});
+
+// 2. DELETE : Supprimer une vidéo spécifique
+app.delete('/delete-video/:filename', (req, res) => {
+    const filename = req.params.filename;
+    
+    // Sécurité anti-traversée de dossier
+    if (filename.includes('..') || filename.includes('/')) {
+        return res.status(400).json({ error: "Nom de fichier invalide" });
+    }
+
+    const filePath = path.join(outDir, filename);
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "Fichier non trouvé" });
+    }
+
+    fs.unlink(filePath, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        console.log(`[DELETE] ${filename} supprimé.`);
+        res.json({ success: true, message: `Vidéo ${filename} supprimée.` });
+    });
+});
+
 // Serveur de fichiers statiques pour le dossier 'out'
 app.use('/out', express.static(outDir));
 
