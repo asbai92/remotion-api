@@ -8,9 +8,14 @@
   "dependencies": {
     "@remotion/cli": "latest",
     "@remotion/renderer": "latest",
+    "dotenv": "^17.2.3",
     "express": "latest",
-    "remotion": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "remotion": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.3"
   }
 }
