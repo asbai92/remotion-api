@@ -17,8 +17,6 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-// Appliquer la sécurité sur toutes les routes
-app.use(authMiddleware);
 app.use(express.json());
 
 // Configuration via variables d'environnement
@@ -49,7 +47,7 @@ initBundle().catch(err => {
 });
 
 // ROUTE PRINCIPALE : Rendu de la vidéo
-app.post('/render', async (req, res) => {
+app.post('/render', authMiddleware, async (req, res) => {
     if (!bundled) {
         return res.status(503).json({ error: "Le bundle n'est pas encore prêt. Veuillez patienter." });
     }
@@ -97,7 +95,7 @@ app.post('/render', async (req, res) => {
 });
 
 // 1. GET : Lister toutes les vidéos présentes
-app.get('/videos', (req, res) => {
+app.get('/videos', authMiddleware, (req, res) => {
     fs.readdir(outDir, (err, files) => {
         if (err) {
             return res.status(500).json({ error: "Impossible de lire le dossier out" });
@@ -118,7 +116,7 @@ app.get('/videos', (req, res) => {
 });
 
 // 2. DELETE : Supprimer une vidéo spécifique
-app.delete('/delete-video/:filename', (req, res) => {
+app.delete('/delete-video/:filename', authMiddleware, (req, res) => {
     const filename = req.params.filename;
     
     // Sécurité anti-traversée de dossier
