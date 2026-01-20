@@ -6,6 +6,19 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+
+// Middleware de sécurité
+const authMiddleware = (req, res, next) => {
+    const apiKey = req.headers['x-api-key'];
+    if (apiKey && apiKey === process.env.API_KEY) {
+        next(); // La clé est bonne, on continue
+    } else {
+        res.status(401).json({ error: "Accès refusé. Clé API invalide ou absente." });
+    }
+};
+
+// Appliquer la sécurité sur toutes les routes
+app.use(authMiddleware);
 app.use(express.json());
 
 // Configuration via variables d'environnement
