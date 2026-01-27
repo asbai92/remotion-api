@@ -1,0 +1,16 @@
+remotion-api/
+├── public/                 # Assets statiques
+│   ├── branding/           # Vidéos background et musiques
+│   ├── lotties/            # Fichiers JSON Lottie
+│   └── sfx/                # Effets sonores (transitions/UI)
+├── src/
+│   ├── layouts/            # Les 8 types de scènes (Hero, Concept, etc.)
+│   ├── components/         # Composants réutilisables (Transition, Audio, etc.)
+│   ├── types/              # Définitions TypeScript et Schéma Zod
+│   ├── constants/          # Thèmes et configurations par défaut
+│   ├── Root.tsx            # Enregistrement des compositions
+│   └── index.tsx           # Point d'entrée Remotion
+├── out/                    # Dossier des vidéos générées (automatique)
+├── .env                    # Variables d'environnement (API_KEY, etc.)
+├── server.js               # Ton fichier serveur (déjà commencé)
+└── package.json            # Dépendances

@@ -4,145 +4,154 @@ const { bundle } = require('@remotion/bundler');
 const { renderMedia, selectComposition } = require('@remotion/renderer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+
+// Utilisation de ts-node pour charger le schéma TypeScript
+require('ts-node').register({ transpileOnly: true });
+
+const { ProjectConfigSchema } = require('./src/types/schema');
 
 const app = express();
+app.use(express.json({ limit: '50mb' }));
 
-// Middleware de sécurité
-const authMiddleware = (req, res, next) => {
-    const apiKey = req.headers['x-api-key'];
-    if (apiKey && apiKey === process.env.API_KEY) {
-        next(); // La clé est bonne, on continue
-    } else {
-        res.status(401).json({ error: "Accès refusé. Clé API invalide ou absente." });
-    }
-};
-
-app.use(express.json());
-
-// Configuration via variables d'environnement
+// --- CONFIGURATION ---
 const PORT = process.env.PORT || 3000;
+const API_KEY = process.env.API_KEY;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
-
-// Sécurité : Création du dossier 'out' s'il n'existe pas
 const outDir = path.resolve(__dirname, 'out');
+
 if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir);
-    console.log("[SETUP] Dossier 'out' créé.");
 }
 
-let bundled = null;
-
-// INITIALISATION : Création du bundle au démarrage
-const initBundle = async () => {
-    console.log("[INIT] Création du bundle Remotion (Webpack)...");
-    bundled = await bundle({
-        entryPoint: path.resolve(__dirname, './src/index.tsx'),
-        webpackOverride: (config) => config,
-    });
-    console.log("[INIT] Bundle prêt !");
+// --- MIDDLEWARE DE SÉCURITÉ ---
+const authMiddleware = (req, res, next) => {
+    const apiKey = req.headers['x-api-key'];
+    if (API_KEY && apiKey !== API_KEY) {
+        return res.status(401).json({ error: "Accès refusé. Clé API invalide." });
+    }
+    next();
 };
 
-initBundle().catch(err => {
-    console.error("[ERROR] Échec du bundle:", err);
-});
+// --- INITIALISATION DU BUNDLE ---
+let bundled = null;
+const initBundle = async () => {
+    try {
+        console.log("[INIT] Création du bundle Remotion...");
+        bundled = await bundle({
+            entryPoint: path.resolve(__dirname, './src/index.tsx'),
+            webpackOverride: (config) => config,
+        });
+        console.log("[INIT] Bundle prêt et chargé.");
+    } catch (err) {
+        console.error("[ERROR] Échec du bundle au démarrage:", err);
+    }
+};
 
-// ROUTE PRINCIPALE : Rendu de la vidéo
+initBundle();
+
+// --- ROUTES ---
+
+// 1. Rendu Vidéo
 app.post('/render', authMiddleware, async (req, res) => {
     if (!bundled) {
-        return res.status(503).json({ error: "Le bundle n'est pas encore prêt. Veuillez patienter." });
+        return res.status(503).json({ error: "Le moteur de rendu n'est pas encore prêt." });
     }
 
-    const requestId = Date.now();
-    try {
-        const { id, inputProps } = req.body;
-        const compositionId = id || 'HelloWorld';
+    // Vérification de la structure racine
+    if (!req.body.inputProps) {
+        console.error("❌ Erreur : 'inputProps' est manquant.");
+        return res.status(400).json({ 
+            error: "Structure racine invalide", 
+            message: "Le JSON doit contenir une clé 'inputProps' à la racine." 
+        });
+    }
 
-        // 1. Sélection de la composition
+    // CORRECTION : Validation avec le bon nom de schéma
+    const result = ProjectConfigSchema.safeParse(req.body.inputProps);
+    
+    if (!result.success) {
+        const detailedErrors = result.error.issues.map(issue => ({
+            emplacement: issue.path.join(' -> '),
+            message: issue.message,
+            type: issue.code
+        }));
+
+        console.error("❌ Erreur de validation JSON :", JSON.stringify(detailedErrors, null, 2));
+
+        return res.status(400).json({ 
+            error: "Le JSON ne respecte pas le schéma", 
+            details: detailedErrors 
+        });
+    }
+
+    const inputProps = result.data;
+    const requestId = Date.now();
+    const outputName = `video-${requestId}.mp4`;
+    const outputLocation = path.join(outDir, outputName);
+
+    try {
+        console.log(`[${requestId}] Début du rendu...`);
+
         const composition = await selectComposition({
             serveUrl: bundled,
-            id: compositionId,
-            inputProps: inputProps || {},
+            id: 'MainVideo', 
+            inputProps,
         });
 
-        const outputName = `video-${requestId}.mp4`;
-        const outputLocation = path.join(outDir, outputName);
-
-        // 2. Rendu de la vidéo
-        console.log(`[${requestId}] Rendu en cours : ${compositionId}`);
         await renderMedia({
             codec: 'h264',
             composition,
             serveUrl: bundled,
-            outputLocation: outputLocation,
+            outputLocation,
+            inputProps,
+            concurrency: os.cpus().length,
             chromiumOptions: {
+                timeoutInMilliseconds: 60000,
                 enableMultiProcessOnLinux: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
             },
-            inputProps: inputProps || {},
         });
 
-        // 3. Réponse avec l'URL dynamique (Local ou Prod)
-        res.json({ 
-            success: true, 
-            url: `${BASE_URL}/out/${outputName}` 
+        console.log(`[${requestId}] Terminé : ${outputName}`);
+
+        res.json({
+            success: true,
+            videoUrl: `${BASE_URL}/out/${outputName}`,
+            filename: outputName
         });
 
-        console.log(`[${requestId}] Rendu terminé : ${outputName}`);
-
-    } catch (e) {
-        console.error(`[${requestId}] Erreur:`, e.message);
-        res.status(500).json({ error: e.message });
+    } catch (error) {
+        console.error(`[${requestId}] Erreur de rendu:`, error);
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 1. GET : Lister toutes les vidéos présentes
+// 2. Gestion des fichiers
 app.get('/videos', authMiddleware, (req, res) => {
-    fs.readdir(outDir, (err, files) => {
-        if (err) {
-            return res.status(500).json({ error: "Impossible de lire le dossier out" });
-        }
-
-        // On ne garde que les fichiers .mp4
-        const videos = files
-            .filter(file => file.endsWith('.mp4'))
-            .map(file => ({
-                name: file,
-                url: `${BASE_URL}/out/${file}`,
-                size: fs.statSync(path.join(outDir, file)).size,
-                createdAt: fs.statSync(path.join(outDir, file)).birthtime
-            }));
-
-        res.json({ count: videos.length, videos });
-    });
+    const files = fs.readdirSync(outDir)
+        .filter(f => f.endsWith('.mp4'))
+        .map(f => ({ name: f, url: `${BASE_URL}/out/${f}` }));
+    res.json(files);
 });
 
-// 2. DELETE : Supprimer une vidéo spécifique
-app.delete('/delete-video/:filename', authMiddleware, (req, res) => {
-    const filename = req.params.filename;
-    
-    // Sécurité anti-traversée de dossier
-    if (filename.includes('..') || filename.includes('/')) {
-        return res.status(400).json({ error: "Nom de fichier invalide" });
+app.delete('/video/:name', authMiddleware, (req, res) => {
+    const filePath = path.join(outDir, req.params.name);
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        return res.json({ success: true });
     }
-
-    const filePath = path.join(outDir, filename);
-
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: "Fichier non trouvé" });
-    }
-
-    fs.unlink(filePath, (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        console.log(`[DELETE] ${filename} supprimé.`);
-        res.json({ success: true, message: `Vidéo ${filename} supprimée.` });
-    });
+    res.status(404).json({ error: "Fichier non trouvé" });
 });
 
-// Serveur de fichiers statiques pour le dossier 'out'
 app.use('/out', express.static(outDir));
 
 app.listen(PORT, () => {
-    console.log(`-----------------------------------------`);
-    console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-    console.log(`🌍 Base URL : ${BASE_URL}`);
-    console.log(`-----------------------------------------`);
+    console.log(`
+    =============================================
+    🚀 SERVEUR REMOTION PRO OPÉRATIONNEL
+    🌍 URL : ${BASE_URL}
+    📂 SORTIE : ${outDir}
+    =============================================
+    `);
 });
