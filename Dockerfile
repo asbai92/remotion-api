@@ -1,7 +1,9 @@
 FROM node:22-bookworm-slim
 
 # Install Chrome dependencies (Liste exacte de la doc)
-RUN apt-get update && apt install -y \
+# 1. Ajoutez des options de retry et le "no-recommends"
+RUN apt-get update && \
+    apt-get install -y -o Acquire::Retries=3 --no-install-recommends \
     libnss3 \
     libdbus-1-3 \
     libatk1.0-0 \
@@ -18,6 +20,7 @@ RUN apt-get update && apt install -y \
     libcups2 \
     ffmpeg \
     fonts-noto-color-emoji \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
