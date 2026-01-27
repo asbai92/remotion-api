@@ -18,7 +18,7 @@ RUN npm install
 
 # IMPORTANT : On force l'installation du navigateur ici
 # On ajoute parfois 'unsafe-perm' si npm bloque les scripts post-install
-RUN npx remotion browser ensure
+RUN npx remotion browser ensure --verbose
 
 COPY . .
 
