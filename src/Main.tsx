@@ -8,6 +8,7 @@ import { flip } from '@remotion/transitions/flip';
 import { ProjectConfig } from './types/schema';
 import { Hero } from './layouts/Hero';
 import { Concept } from './layouts/Concept';
+import { Split } from './layouts/Split';
 import { TRANSITION_SFX_MAP } from './constants/assets';
 
 const TRANSITIONS = [
@@ -50,10 +51,12 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
               )}
 
               {scene.layout === 'CONCEPT' && (
-                <Concept 
-                  lottieAsset={scene.content.lottie || "default.json"} 
-  />
-)}
+                <Concept content={scene.content} />
+              )}
+
+              {scene.layout === 'SPLIT' && (
+                <Split content={scene.content} />
+              )}
               
               <Audio src={scene.audio_voix_off} />
               

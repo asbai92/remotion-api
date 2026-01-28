@@ -4,13 +4,19 @@ import { Lottie, LottieAnimationData } from '@remotion/lottie';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
 
 interface ConceptProps {
-  lottieAsset: string;
+  // On passe 'content' pour matcher ton JSON : content.lottie
+  content: {
+    lottie?: string;
+  };
 }
 
-export const Concept: React.FC<ConceptProps> = ({ lottieAsset }) => {
+export const Concept: React.FC<ConceptProps> = ({ content }) => {
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const delay = 30; 
+  
+  // Sécurité : on récupère la valeur ou une chaîne vide pour éviter le crash .toLowerCase()
+  const lottieAsset = content?.lottie || "";
   
   const lottieFrame = Math.max(0, frame - delay);
 
@@ -22,10 +28,14 @@ export const Concept: React.FC<ConceptProps> = ({ lottieAsset }) => {
 
   const [data, setData] = useState<LottieAnimationData | null>(null);
   
-  const assetKey = lottieAsset.replace('.json', '');
+  // On nettoie la clé seulement si lottieAsset existe
+  const assetKey = lottieAsset ? lottieAsset.replace('.json', '') : "generic";
   const sfxName = LOTTIE_SFX_MAP[assetKey] || LOTTIE_SFX_MAP['generic'];
 
   useEffect(() => {
+    // Si pas de lottie spécifié, on ne fait rien
+    if (!lottieAsset) return;
+
     const fileName = lottieAsset.endsWith('.json') ? lottieAsset : `${lottieAsset}.json`;
     fetch(staticFile(`/lotties/${fileName}`))
       .then((res) => res.json())
@@ -38,13 +48,11 @@ export const Concept: React.FC<ConceptProps> = ({ lottieAsset }) => {
   return (
     <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: '100px' }}>
       
-      {/* On crée une séquence qui commence exactement au délai.
-         Tout ce qui est à l'intérieur (l'Audio) verra sa propre frame 0 à la frame 30 du parent.
-      */}
+      {/* SFX déclenché après la transition */}
       <Sequence from={delay}>
         <Audio 
           src={staticFile(`/sfx/${sfxName}`)} 
-          volume={0.8} // On monte un peu le son pour être sûr
+          volume={0.8} 
         />
       </Sequence>
 
