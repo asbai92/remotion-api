@@ -1,59 +1,80 @@
 import React from 'react';
-import { AbsoluteFill, Audio, staticFile, useVideoConfig, Series, OffthreadVideo, Loop } from 'remotion';
+import { AbsoluteFill, Audio, staticFile, useVideoConfig, OffthreadVideo, Loop, Sequence } from 'remotion';
+import { TransitionSeries, linearTiming } from '@remotion/transitions';
+import { slide } from '@remotion/transitions/slide';
+import { fade } from '@remotion/transitions/fade';
+import { wipe } from '@remotion/transitions/wipe';
+import { flip } from '@remotion/transitions/flip';
 import { ProjectConfig } from './types/schema';
 import { Hero } from './layouts/Hero';
+import { TRANSITION_SFX_MAP } from './constants/assets';
+
+const TRANSITIONS = [
+  { name: 'slide', component: () => slide() },
+  { name: 'fade', component: () => fade() },
+  { name: 'wipe', component: () => wipe() },
+  { name: 'flip', component: () => flip() },
+];
 
 export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
   const { fps } = useVideoConfig();
+  const transitionDuration = Math.round(fps * 0.5);
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {/* 1. Background avec OffthreadVideo pour une stabilité totale */}
       <AbsoluteFill>
-        {/* On boucle sur une durée fixe (ex: 10s) pour assurer la répétition */}
         <Loop durationInFrames={fps * 10}> 
           <OffthreadVideo
             src={staticFile('/branding/background.mp4')}
-            style={{ 
-              objectFit: 'cover', 
-              width: '100%', 
-              height: '100%', 
-              opacity: 0.4 
-            }}
+            style={{ objectFit: 'cover', width: '100%', height: '100%', opacity: 0.4 }}
           />
         </Loop>
       </AbsoluteFill>
 
-      {/* 2. Musique de fond */}
-      <Audio
-        src={staticFile('/branding/music.mp3')}
-        volume={0.2}
-        loop
-      />
+      <Audio src={staticFile('/branding/music.mp3')} volume={0.1} loop />
 
-      {/* 3. Séquence des Scènes */}
-      <Series>
-        {scenes.map((scene, index) => {
+      <TransitionSeries>
+        {scenes.flatMap((scene, index) => {
           const duration = Math.round(scene.duree_vo * fps);
-          
-          return (
-            <Series.Sequence 
-              key={`${index}-${scene.layout}`} 
-              durationInFrames={duration}
-            >
+          const isLast = index === scenes.length - 1;
+
+          const type = TRANSITIONS[index % TRANSITIONS.length];
+          const presentation = type.component() as any;
+          const sfx = TRANSITION_SFX_MAP[type.name] || TRANSITION_SFX_MAP['generic'];
+
+          const sequence = (
+            <TransitionSeries.Sequence key={`seq-${index}`} durationInFrames={duration}>
               {scene.layout === 'HERO' && (
-                <Hero 
-                  text={scene.content.texte_principal || ""} 
-                  keywords={scene.content.mots_cles} 
-                />
+                <Hero text={scene.content.texte_principal || ""} keywords={scene.content.mots_cles} />
               )}
               
-              {/* Audio Voix-off spécifique à la scène */}
               <Audio src={scene.audio_voix_off} />
-            </Series.Sequence>
+              
+              {!isLast && (
+                /* On utilise <Sequence /> pour décaler le son dans le temps */
+                <Sequence from={duration - Math.round(transitionDuration / 2)}>
+                  <Audio 
+                    src={staticFile(`/transitions-sfx/${sfx}`)} 
+                    volume={0.6} 
+                  />
+                </Sequence>
+              )}
+            </TransitionSeries.Sequence>
           );
+
+          if (isLast) return [sequence];
+
+          const transition = (
+            <TransitionSeries.Transition
+              key={`trans-${index}`}
+              presentation={presentation}
+              timing={linearTiming({ durationInFrames: transitionDuration })}
+            />
+          );
+
+          return [sequence, transition];
         })}
-      </Series>
+      </TransitionSeries>
     </AbsoluteFill>
   );
 };

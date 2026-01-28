@@ -7,7 +7,6 @@ export const LayoutSchema = z.enum([
   'SPLIT',
   'GRID',
   'LIST',
-  'DEVICE',
   'TALKING_HEAD',
   'QUOTE',
   'COMPARISON',
@@ -17,13 +16,24 @@ export const LayoutSchema = z.enum([
 const SceneContentSchema = z.object({
   texte_principal: z.string().optional(),
   mots_cles: z.array(z.string()).optional(),
-  lottie: z.string().optional(),
-  lotties: z.array(z.string()).optional(),
+  
+  // Remplacement de lottie par image
+  image: z.string().optional(), 
+  images: z.array(z.string()).optional(),
+  
   titre: z.string().optional(),
   points: z.array(z.string()).optional(),
-  cote_gauche: z.any().optional(),
-  cote_droit: z.any().optional(),
-  device: z.string().optional(),
+  
+  // Pour le layout SPLIT
+  leftContent: z.object({
+    image: z.string().optional(),
+    texte: z.string().optional(),
+  }).optional(),
+  rightContent: z.object({
+    image: z.string().optional(),
+    texte: z.string().optional(),
+  }).optional(),
+  
   media: z.string().optional(),
   video_source: z.string().optional(),
   citation: z.string().optional(),

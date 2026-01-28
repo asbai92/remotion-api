@@ -1,16 +1,22 @@
 remotion-api/
-├── public/                 # Assets statiques
-│   ├── branding/           # Vidéos background et musiques
-│   ├── lotties/            # Fichiers JSON Lottie
-│   └── sfx/                # Effets sonores (transitions/UI)
+├── public/
+│   ├── branding/
+│   │   ├── background.mp4
+│   │   └── music.mp3
+│   ├── lotties/            # Tes fichiers .json Lottie
+│   ├── sfx/                # Tes fichiers .mp3 d'effets sonores
+│   └── transitions/        # SFX spécifiques aux transitions
 ├── src/
-│   ├── layouts/            # Les 8 types de scènes (Hero, Concept, etc.)
-│   ├── components/         # Composants réutilisables (Transition, Audio, etc.)
-│   ├── types/              # Définitions TypeScript et Schéma Zod
-│   ├── constants/          # Thèmes et configurations par défaut
-│   ├── Root.tsx            # Enregistrement des compositions
-│   └── index.tsx           # Point d'entrée Remotion
-├── out/                    # Dossier des vidéos générées (automatique)
-├── .env                    # Variables d'environnement (API_KEY, etc.)
-├── server.js               # Ton fichier serveur (déjà commencé)
-└── package.json            # Dépendances
+│   ├── components/         # Composants réutilisables (Lottie, Transition)
+│   ├── constants/
+│   │   ├── assets.ts       # Mapping SFX et assets
+│   │   └── theme.ts        # Couleurs et polices
+│   ├── layouts/            # Les 8 layouts (Hero, Concept, etc.)
+│   ├── types/
+│   │   └── schema.ts       # Ton schéma Zod
+│   ├── Main.tsx            # Orchestrateur (Series, Transitions)
+│   ├── Root.tsx            # Point d'entrée Remotion
+│   └── index.tsx           # Enregistrement du projet
+├── server.js               # Serveur API Express
+├── package.json
+└── .env

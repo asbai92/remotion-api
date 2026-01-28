@@ -8,7 +8,7 @@ export const THEME = {
   colors: {
     background: '#000000',
     text: '#FFFFFF', // Couleur principale
-    accent: '#00FFCC', // Couleur pour les mots importants
+    accent: '#F3C80D', // Couleur pour les mots importants
   },
   typography: {
     fontFamily: fontFamily,

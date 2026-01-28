@@ -9,20 +9,20 @@
     "build": "remotion bundle src/index.tsx out/bundle.js"
   },
   "dependencies": {
-    "remotion": "latest",
-    "@remotion/renderer": "latest",
-    "@remotion/cli": "latest",
     "@remotion/bundler": "latest",
+    "@remotion/cli": "latest",
     "@remotion/google-fonts": "latest",
     "@remotion/lottie": "latest",
-    "@remotion/transitions": "latest",
-    "express": "^4.18.2",
+    "@remotion/renderer": "latest",
+    "@remotion/transitions": "^4.0.410",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "react": "latest",
+    "react-dom": "latest",
+    "remotion": "latest",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2",
-    "zod": "^3.22.2",
-    "react": "latest",
-    "react-dom": "latest"
+    "zod": "^3.22.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",

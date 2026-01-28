@@ -1,6 +1,7 @@
 import React from 'react';
-import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill } from 'remotion';
 import { THEME } from '../constants/theme';
+import { Typewriter } from '../components/Typewriter';
 
 interface HeroProps {
   text: string;
@@ -8,52 +9,28 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ text, keywords = [] }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-
-  // Animation d'entrée (zoom + opacité)
-  const entrance = spring({
-    frame,
-    fps,
-    config: { damping: 12 },
-  });
-
-  // Fonction pour styliser les mots-clés
-  const renderStyledText = () => {
-    return text.split(' ').map((word, i) => {
-      const isKeyword = keywords.some(k => word.toUpperCase().includes(k.toUpperCase()));
-      return (
-        <span 
-          key={i} 
-          style={{ 
-            color: isKeyword ? THEME.colors.accent : THEME.colors.text,
-            margin: '0 15px'
-          }}
-        >
-          {word}
-        </span>
-      );
-    });
-  };
+  // On enlève useCurrentFrame, useVideoConfig et spring
+  // car Typewriter gère sa propre timeline interne.
 
   return (
     <AbsoluteFill style={{
       justifyContent: 'center',
       alignItems: 'center',
       padding: '0 50px',
-      transform: `scale(${0.8 + 0.2 * entrance})`,
-      opacity: entrance,
+      // On enlève aussi les transforms liés à 'entrance'
     }}>
-      <h1 style={{
-        fontFamily: THEME.typography.fontFamily,
-        fontSize: THEME.typography.fontSize.hero,
-        textAlign: 'center',
-        fontWeight: 900,
-        lineHeight: 1.1,
-        textTransform: 'uppercase',
-      }}>
-        {renderStyledText()}
-      </h1>
+      <Typewriter 
+        text={text} 
+        keywords={keywords}
+        baseStyle={{
+          fontFamily: THEME.typography.fontFamily,
+          fontSize: THEME.typography.fontSize.title,
+          textAlign: 'center',
+          fontWeight: 900,
+          lineHeight: 1.1,
+          textTransform: 'uppercase',
+        }}
+      />
     </AbsoluteFill>
   );
 };
