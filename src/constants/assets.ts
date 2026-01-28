@@ -6,9 +6,9 @@ export const LOTTIE_SFX_MAP: Record<string, string> = {
 };
 
 export const TRANSITION_SFX_MAP: Record<string, string> = {
-  slide: 'whoosh.mp3',
-  fade: 'Swoosh.mp3',
-  wipe: 'Swoosh-Reverb.mp3',
-  flip: 'Trail-Swoosh.mp3',
+  slide: 'whoosh1.mp3',
+  fade: 'whoosh2.mp3',
+  wipe: 'whoosh3.mp3',
+  flip: 'whoosh4.mp3',
   generic: 'whoosh.mp3',
 };
