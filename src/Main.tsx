@@ -7,6 +7,7 @@ import { wipe } from '@remotion/transitions/wipe';
 import { flip } from '@remotion/transitions/flip';
 import { ProjectConfig } from './types/schema';
 import { Hero } from './layouts/Hero';
+import { Concept } from './layouts/Concept';
 import { TRANSITION_SFX_MAP } from './constants/assets';
 
 const TRANSITIONS = [
@@ -26,7 +27,7 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
         <Loop durationInFrames={fps * 10}> 
           <OffthreadVideo
             src={staticFile('/branding/background.mp4')}
-            style={{ objectFit: 'cover', width: '100%', height: '100%', opacity: 0.4 }}
+            style={{ objectFit: 'cover', width: '100%', height: '100%', opacity: 0.8 }}
           />
         </Loop>
       </AbsoluteFill>
@@ -47,6 +48,12 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
               {scene.layout === 'HERO' && (
                 <Hero text={scene.content.texte_principal || ""} keywords={scene.content.mots_cles} />
               )}
+
+              {scene.layout === 'CONCEPT' && (
+                <Concept 
+                  lottieAsset={scene.content.lottie || "default.json"} 
+  />
+)}
               
               <Audio src={scene.audio_voix_off} />
               

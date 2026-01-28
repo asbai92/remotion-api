@@ -1,7 +1,10 @@
 // Mapping entre le nom de l'image et son bruitage associé
 export const LOTTIE_SFX_MAP: Record<string, string> = {
-  cerveau: 'pop.mp3',
-  machine: 'click.mp3',
+  home: 'pop.mp3',
+  camera: 'click.mp3',
+  computer: 'pop.mp3',
+  consultation: 'pop.mp3',
+  globe: 'pop.mp3',
   generic: 'pop.mp3', // Son par défaut
 };
 

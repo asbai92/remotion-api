@@ -18,7 +18,7 @@ const SceneContentSchema = z.object({
   mots_cles: z.array(z.string()).optional(),
   
   // Remplacement de lottie par image
-  image: z.string().optional(), 
+  lottie: z.string().optional(), 
   images: z.array(z.string()).optional(),
   
   titre: z.string().optional(),
