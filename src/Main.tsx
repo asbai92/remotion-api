@@ -8,7 +8,13 @@ import { flip } from '@remotion/transitions/flip';
 import { ProjectConfig } from './types/schema';
 import { Hero } from './layouts/Hero';
 import { Concept } from './layouts/Concept';
-import { Split } from './layouts/Split';
+
+// Import des 4 variantes de SPLIT
+import { SplitTextTop } from './layouts/SplitTextTop';
+import { SplitMediaTop } from './layouts/SplitMediaTop';
+import { SplitTextLeft } from './layouts/SplitTextLeft';
+import { SplitMediaLeft } from './layouts/SplitMediaLeft';
+
 import { TRANSITION_SFX_MAP } from './constants/assets';
 
 const TRANSITIONS = [
@@ -54,14 +60,26 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
                 <Concept content={scene.content} />
               )}
 
-              {scene.layout === 'SPLIT' && (
-                <Split content={scene.content} />
+              {/* Gestion des 4 layouts SPLIT */}
+              {scene.layout === 'SPLIT_TEXT_TOP' && (
+                <SplitTextTop content={scene.content} />
+              )}
+
+              {scene.layout === 'SPLIT_MEDIA_TOP' && (
+                <SplitMediaTop content={scene.content} />
+              )}
+
+              {scene.layout === 'SPLIT_TEXT_LEFT' && (
+                <SplitTextLeft content={scene.content} />
+              )}
+
+              {scene.layout === 'SPLIT_MEDIA_LEFT' && (
+                <SplitMediaLeft content={scene.content} />
               )}
               
               <Audio src={scene.audio_voix_off} />
               
               {!isLast && (
-                /* On utilise <Sequence /> pour décaler le son dans le temps */
                 <Sequence from={duration - Math.round(transitionDuration / 2)}>
                   <Audio 
                     src={staticFile(`/transitions-sfx/${sfx}`)} 
