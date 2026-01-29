@@ -25,9 +25,8 @@ const SceneContentSchema = z.object({
   citation: z.string().optional(),
   auteur: z.string().optional(),
 
-  // --- Champs Médias (Le champ unique 'media' remplace 'lottie') ---
   media: z.string().optional(), 
-  images: z.array(z.string()).optional(),
+  medias: z.array(z.string()).optional(),
   video_source: z.string().optional(),
   
   // --- Champs Spécifiques (Split, Comparison) ---
@@ -41,6 +40,17 @@ const SceneContentSchema = z.object({
     texte: z.string().optional(),
     mots_cles: z.array(z.string()).optional(),
   }).optional(),
+
+  leftContent: z.object({
+    media: z.string().optional(),
+    texte: z.string().optional(),
+    mots_cles: z.array(z.string()).optional(),
+  }).optional(),
+  rightContent: z.object({
+    media: z.string().optional(),
+    texte: z.string().optional(),
+    mots_cles: z.array(z.string()).optional(),
+  }).optional(),
   
   avant: z.string().optional(),
   apres: z.string().optional(),
@@ -48,7 +58,7 @@ const SceneContentSchema = z.object({
 
 export const SceneSchema = z.object({
   layout: LayoutSchema,
-  audio_voix_off: z.string(),
+  audio_voix_off: z.string().optional(), 
   duree_vo: z.number(), 
   content: SceneContentSchema,
 });

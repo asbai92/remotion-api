@@ -7,8 +7,8 @@ import { LOTTIE_SFX_MAP } from '../constants/assets';
 
 interface SplitProps {
   content: {
-    topContent?: { media?: string; texte?: string; mots_cles?: string[] };
-    bottomContent?: { media?: string; texte?: string; mots_cles?: string[] };
+    leftContent?: { media?: string; texte?: string; mots_cles?: string[] };
+    rightContent?: { media?: string; texte?: string; mots_cles?: string[] };
     mots_cles?: string[];
   };
 }
@@ -36,9 +36,9 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
         fetch(staticFile(`/lotties/${fileName}`)).then(res => res.json()).then(setter).catch(e => console.error(e));
       }
     };
-    loadLottie(content.topContent?.media, setLottieTop);
-    loadLottie(content.bottomContent?.media, setLottieBottom);
-  }, [content.topContent?.media, content.bottomContent?.media]);
+    loadLottie(content.leftContent?.media, setLottieTop);
+    loadLottie(content.rightContent?.media, setLottieBottom);
+  }, [content.leftContent?.media, content.rightContent?.media]);
 
   const renderZone = (zone: { media?: string; texte?: string; mots_cles?: string[] } | undefined, lottieData: any, isMedia: boolean) => {
     if (!zone) return null;
@@ -77,7 +77,7 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
     return null;
   };
 
-  const sfxName = LOTTIE_SFX_MAP[(content.topContent?.media || "").replace('.json', '')] || LOTTIE_SFX_MAP['generic'];
+  const sfxName = LOTTIE_SFX_MAP[(content.leftContent?.media || "").replace('.json', '')] || LOTTIE_SFX_MAP['generic'];
 
   return (
     <AbsoluteFill style={{ 
@@ -89,7 +89,7 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
       padding: '0 80px'
     }}>
       
-      {content.topContent?.media && (
+      {content.leftContent?.media && (
         <Sequence from={delay}>
           <Audio src={staticFile(`/sfx/${sfxName}`)} volume={0.8} />
         </Sequence>
@@ -102,7 +102,7 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
         transform: `scale(${mediaEntrance})`,
         opacity: mediaEntrance
       }}>
-        {renderZone(content.topContent, lottieTop, true)}
+        {renderZone(content.leftContent, lottieTop, true)}
       </div>
 
       {/* ESPACE ENTRE LES DEUX */}
@@ -114,7 +114,7 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
         opacity: textEntrance,
         transform: `translateX(${interpolate(textEntrance, [0, 1], [50, 0])}px)` 
       }}>
-        {renderZone(content.bottomContent, lottieBottom, false)}
+        {renderZone(content.rightContent, lottieBottom, false)}
       </div>
 
     </AbsoluteFill>

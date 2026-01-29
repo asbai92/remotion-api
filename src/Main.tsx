@@ -6,17 +6,19 @@ import { fade } from '@remotion/transitions/fade';
 import { wipe } from '@remotion/transitions/wipe';
 import { flip } from '@remotion/transitions/flip';
 import { ProjectConfig } from './types/schema';
+
+// Imports de tous les layouts
 import { Hero } from './layouts/Hero';
 import { Concept } from './layouts/Concept';
 import { List } from './layouts/List';
-
-// Import des 4 variantes de SPLIT
+import { TalkingHead } from './layouts/TalkingHead';
 import { SplitTextTop } from './layouts/SplitTextTop';
 import { SplitMediaTop } from './layouts/SplitMediaTop';
 import { SplitTextLeft } from './layouts/SplitTextLeft';
 import { SplitMediaLeft } from './layouts/SplitMediaLeft';
-
+import { Grid } from './layouts/Grid';
 import { TRANSITION_SFX_MAP } from './constants/assets';
+import { Comparison } from './layouts/Comparison';
 
 const TRANSITIONS = [
   { name: 'slide', component: () => slide() },
@@ -31,6 +33,7 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
+      {/* BACKGROUND GLOBAL */}
       <AbsoluteFill>
         <Loop durationInFrames={fps * 10}> 
           <OffthreadVideo
@@ -40,6 +43,7 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
         </Loop>
       </AbsoluteFill>
 
+      {/* MUSIQUE DE FOND */}
       <Audio src={staticFile('/branding/music.mp3')} volume={0.1} loop />
 
       <TransitionSeries>
@@ -53,37 +57,37 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
 
           const sequence = (
             <TransitionSeries.Sequence key={`seq-${index}`} durationInFrames={duration}>
-              {scene.layout === 'HERO' && (
-                <Hero text={scene.content.texte_principal || ""} keywords={scene.content.mots_cles} />
-              )}
+              
+              {/* RENDU CONDITIONNEL DES LAYOUTS */}
+              {scene.layout === 'HERO' && <Hero text={scene.content.texte_principal || ""} keywords={scene.content.mots_cles} />}
+              
+              {scene.layout === 'CONCEPT' && <Concept content={scene.content} />}
 
-              {scene.layout === 'CONCEPT' && (
-                <Concept content={scene.content} />
-              )}
+              {scene.layout === 'LIST' && <List content={scene.content} />}
 
-              {/* Gestion des 4 layouts SPLIT */}
-              {scene.layout === 'SPLIT_TEXT_TOP' && (
-                <SplitTextTop content={scene.content} />
-              )}
+              {scene.layout === 'TALKING_HEAD' && <TalkingHead content={scene.content} />}
 
-              {scene.layout === 'SPLIT_MEDIA_TOP' && (
-                <SplitMediaTop content={scene.content} />
-              )}
-
-              {scene.layout === 'SPLIT_TEXT_LEFT' && (
-                <SplitTextLeft content={scene.content} />
-              )}
-
-              {scene.layout === 'SPLIT_MEDIA_LEFT' && (
-                <SplitMediaLeft content={scene.content} />
-              )}
-
-              {scene.layout === 'LIST' && (
-                <List content={scene.content} />
+              {/* SPLIT LAYOUTS */}
+              {scene.layout === 'SPLIT_TEXT_TOP' && <SplitTextTop content={scene.content} />}
+              {scene.layout === 'SPLIT_MEDIA_TOP' && <SplitMediaTop content={scene.content} />}
+              {scene.layout === 'SPLIT_TEXT_LEFT' && <SplitTextLeft content={scene.content} />}
+              {scene.layout === 'SPLIT_MEDIA_LEFT' && <SplitMediaLeft content={scene.content} />}
+              {scene.layout === 'GRID' && <Grid content={scene.content} />}
+              {/* COMPARISON LAYOUT */}
+              {scene.layout === 'COMPARISON' && <Comparison content={scene.content} />}
+              
+              {/* AUDIO VOIX OFF (UNIQUEMENT SI PRÉSENT) */}
+              {scene.audio_voix_off && (
+              <Audio 
+                src={
+                scene.audio_voix_off.startsWith('http') 
+                ? scene.audio_voix_off 
+                : staticFile(scene.audio_voix_off)
+              } 
+              />
               )}
               
-              <Audio src={scene.audio_voix_off} />
-              
+              {/* SFX DE TRANSITION */}
               {!isLast && (
                 <Sequence from={duration - Math.round(transitionDuration / 2)}>
                   <Audio 
