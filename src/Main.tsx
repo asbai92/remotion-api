@@ -8,6 +8,7 @@ import { flip } from '@remotion/transitions/flip';
 import { ProjectConfig } from './types/schema';
 import { Hero } from './layouts/Hero';
 import { Concept } from './layouts/Concept';
+import { List } from './layouts/List';
 
 // Import des 4 variantes de SPLIT
 import { SplitTextTop } from './layouts/SplitTextTop';
@@ -75,6 +76,10 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
 
               {scene.layout === 'SPLIT_MEDIA_LEFT' && (
                 <SplitMediaLeft content={scene.content} />
+              )}
+
+              {scene.layout === 'LIST' && (
+                <List content={scene.content} />
               )}
               
               <Audio src={scene.audio_voix_off} />
