@@ -9,9 +9,10 @@ interface ComparisonProps {
     medias?: string[]; // [Généralement 2 pour Avant/Après]
     points?: string[]; // [Généralement 2 pour les textes colonnes]
   };
+  durationInSeconds?: number; // Ajout de la prop durée
 }
 
-export const Comparison: React.FC<ComparisonProps> = ({ content }) => {
+export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSeconds = 5 }) => {
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const items = content.medias || [];
@@ -36,6 +37,9 @@ export const Comparison: React.FC<ComparisonProps> = ({ content }) => {
     });
   }, [items]);
 
+  // Calcul de la fin de la séquence pour les sorties éventuelles
+  const totalFrames = durationInSeconds * fps;
+
   const renderItemMedia = (src: string | undefined, index: number) => {
     if (!src) return null;
     const finalUrl = src.startsWith('http') ? src : staticFile(src);
@@ -48,12 +52,17 @@ export const Comparison: React.FC<ComparisonProps> = ({ content }) => {
     return null;
   };
 
+  // Animations synchronisées sur la durée
   const spr = spring({ frame: frame - 15, fps, config: { damping: 12 } });
   const titleEntrance = spring({ frame: frame - 10, fps, config: { damping: 12 } });
 
   const renderColumn = (data: {media?: string, point?: string}, index: number, side: 'left' | 'right') => {
-    const direction = side === 'left' ? -100 : 100;
+    const direction = side === 'left' ? -150 : 150;
+    
+    // Entrée latérale fluide
     const translateX = interpolate(spr, [0, 1], [direction, 0]);
+    // Effet de sortie optionnel (fondu à la fin du temps imparti)
+    const exitOpacity = interpolate(frame, [totalFrames - 10, totalFrames], [1, 0], { extrapolateLeft: 'clamp' });
 
     return (
       <div style={{
@@ -63,11 +72,10 @@ export const Comparison: React.FC<ComparisonProps> = ({ content }) => {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '0 40px',
-        opacity: spr,
+        opacity: spr * exitOpacity,
         transform: `translateX(${translateX}px)`,
         zIndex: 2
       }}>
-        {/* Titre de colonne Avant / Après (Optionnel via points) */}
         <div style={{
             width: '100%',
             aspectRatio: '1/1',
@@ -96,7 +104,9 @@ export const Comparison: React.FC<ComparisonProps> = ({ content }) => {
             backgroundColor: THEME.colors.accent,
             padding: '10px 30px',
             borderRadius: '50px',
-            color: '#000'
+            color: '#000',
+            // Petit rebond sur le texte
+            transform: `scale(${interpolate(spr, [0.8, 1], [0.5, 1], {extrapolateLeft: 'clamp'})})`
           }}>
             {data.point}
           </div>
@@ -121,7 +131,8 @@ export const Comparison: React.FC<ComparisonProps> = ({ content }) => {
           color: 'white',
           textAlign: 'center',
           textTransform: 'uppercase',
-          textShadow: '0 5px 15px rgba(0,0,0,0.5)'
+          textShadow: '0 5px 15px rgba(0,0,0,0.5)',
+          zIndex: 5
         }}>
           {content.titre}
         </div>
@@ -167,7 +178,7 @@ export const Comparison: React.FC<ComparisonProps> = ({ content }) => {
         {renderColumn(colRight, 1, 'right')}
       </div>
 
-      <Sequence from={20}>
+      <Sequence from={15}>
         <Audio src={staticFile('/transitions-sfx/whoosh1.mp3')} volume={0.5} />
       </Sequence>
     </AbsoluteFill>

@@ -60,22 +60,22 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
             <TransitionSeries.Sequence key={`seq-${index}`} durationInFrames={duration}>
               
               {/* RENDU CONDITIONNEL DES LAYOUTS */}
-              {scene.layout === 'HERO' && <Hero text={scene.content.texte_principal || ""} keywords={scene.content.mots_cles} />}
+              {scene.layout === 'HERO' && (<Hero content={{text: scene.content.texte_principal || "",keywords: scene.content.mots_cles}} durationInSeconds={scene.duree_vo} />)}
               
-              {scene.layout === 'CONCEPT' && <Concept content={scene.content} />}
+              {scene.layout === 'CONCEPT' && <Concept content={scene.content} durationInSeconds={scene.duree_vo} />}
 
-              {scene.layout === 'LIST' && <List content={scene.content} />}
+              {scene.layout === 'LIST' && <List content={scene.content} durationInSeconds={scene.duree_vo} />}
 
               {scene.layout === 'TALKING_HEAD' && <TalkingHead content={scene.content} />}
 
               {/* SPLIT LAYOUTS */}
-              {scene.layout === 'SPLIT_TEXT_TOP' && <SplitTextTop content={scene.content} />}
-              {scene.layout === 'SPLIT_MEDIA_TOP' && <SplitMediaTop content={scene.content} />}
-              {scene.layout === 'SPLIT_TEXT_LEFT' && <SplitTextLeft content={scene.content} />}
-              {scene.layout === 'SPLIT_MEDIA_LEFT' && <SplitMediaLeft content={scene.content} />}
-              {scene.layout === 'GRID' && <Grid content={scene.content} />}
+              {scene.layout === 'SPLIT_TEXT_TOP' && <SplitTextTop content={scene.content} durationInSeconds={scene.duree_vo} />}
+              {scene.layout === 'SPLIT_MEDIA_TOP' && <SplitMediaTop content={scene.content} durationInSeconds={scene.duree_vo} />}
+              {scene.layout === 'SPLIT_TEXT_LEFT' && <SplitTextLeft content={scene.content} durationInSeconds={scene.duree_vo} />}
+              {scene.layout === 'SPLIT_MEDIA_LEFT' && <SplitMediaLeft content={scene.content} durationInSeconds={scene.duree_vo} />}
+              {scene.layout === 'GRID' && <Grid content={scene.content} durationInSeconds={scene.duree_vo} />}
               {/* COMPARISON LAYOUT */}
-              {scene.layout === 'COMPARISON' && <Comparison content={scene.content} />}
+              {scene.layout === 'COMPARISON' && <Comparison content={scene.content} durationInSeconds={scene.duree_vo} />}
               {scene.layout === 'DIAGRAM' && <Diagram content={scene.content} durationInSeconds={scene.duree_vo} />}
               
               {/* AUDIO VOIX OFF (UNIQUEMENT SI PRÉSENT) */}

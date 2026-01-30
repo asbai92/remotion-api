@@ -11,24 +11,30 @@ interface SplitProps {
     bottomContent?: { media?: string; texte?: string; mots_cles?: string[] };
     mots_cles?: string[];
   };
+  durationInSeconds?: number;
 }
 
-export const SplitTextTop: React.FC<SplitProps> = ({ content }) => {
+export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
+  const totalFrames = durationInSeconds * fps;
   
-  const delay = 30;
-  // On attend que le texte finisse avant de décaler vers le haut
-  const shiftDelay = delay + 100;
+  const delay = 15;
+  
+  // 1. On garde le shiftDelay à 60% comme tu l'as souhaité
+  const shiftDelay = Math.floor(totalFrames * 0.60);
+
+  // 2. On définit la fin de l'écriture 1 seconde (fps) AVANT le shiftDelay
+  // Si la scène est trop courte, on s'assure d'avoir au moins 15 frames de battement
+  const writingEndFrameTop = Math.max(delay + 20, shiftDelay - fps);
 
   // Animations
-  const entrance = spring({ frame: frame - delay, fps, config: { damping: 12, stiffness: 100, mass: 0.8 } });
+  const entrance = spring({ frame: frame - delay, fps, config: { damping: 12, stiffness: 100 } });
   const shift = spring({ frame: frame - shiftDelay, fps, config: { damping: 15, stiffness: 80 } });
 
-  const dynamicScale = interpolate(shift, [0, 1], [entrance, 0.8]);
-  const translateY = interpolate(shift, [0, 1], [0, -20]);
+  const dynamicScale = interpolate(shift, [0, 1], [entrance, 0.75]);
+  const translateY = interpolate(shift, [0, 1], [0, -22]);
 
-  // États pour les Lotties
   const [lottieTop, setLottieTop] = useState<LottieAnimationData | null>(null);
   const [lottieBottom, setLottieBottom] = useState<LottieAnimationData | null>(null);
 
@@ -50,19 +56,28 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content }) => {
     const zoneKeywords = zone.mots_cles || content.mots_cles || [];
 
     if (zone.texte && !zone.media) {
+      const startFrame = isBottom ? shiftDelay + 15 : delay + 10;
+      
+      // Utilisation du writingEndFrameTop calculé pour le texte du haut
+      const writingEndFrame = isBottom ? totalFrames * 0.95 : writingEndFrameTop; 
+      
+      const availableFrames = Math.max(20, writingEndFrame - startFrame);
+      const idealSpeed = zone.texte.length / availableFrames;
+
       return (
         <Typewriter 
           text={zone.texte} 
           keywords={zoneKeywords}
-          delay={isBottom ? shiftDelay + 20 : delay + 10}
+          delay={startFrame}
+          speed={idealSpeed}
           baseStyle={{
             fontFamily: THEME.typography.fontFamily,
-            fontSize: THEME.typography.fontSize.title * 0.8,
+            fontSize: THEME.typography.fontSize.title * 0.75,
             textAlign: 'center',
             fontWeight: 900,
             color: 'white',
             textTransform: 'uppercase',
-            textShadow: '0px 0px 15px rgba(0,0,0,0.7)',
+            textShadow: '0px 5px 20px rgba(0,0,0,0.6)',
             width: '100%'
           }}
         />
@@ -71,7 +86,12 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content }) => {
 
     if (zone.media) {
       const finalUrl = zone.media.startsWith('http') ? zone.media : staticFile(zone.media);
-      const style: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'contain' };
+      const style: React.CSSProperties = { 
+        width: '100%', 
+        height: '100%', 
+        objectFit: 'contain',
+        filter: 'drop-shadow(0 15px 40px rgba(0,0,0,0.4))'
+      };
       const pathLower = zone.media.toLowerCase();
       
       if (pathLower.endsWith('.mp4')) return <OffthreadVideo src={finalUrl} style={style} />;
@@ -82,20 +102,18 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content }) => {
     return null;
   };
 
-  // SFX intelligent : On cherche le son pour le média du BAS car c'est lui qui arrive en deuxième
   const sfxName = LOTTIE_SFX_MAP[(content.bottomContent?.media || "").replace('.json', '')] || LOTTIE_SFX_MAP['generic'];
 
   return (
     <AbsoluteFill style={{ backgroundColor: 'transparent' }}>
       
-      {/* SFX : Déclenché au moment où le média du bas apparaît */}
       {content.bottomContent?.media && (
         <Sequence from={shiftDelay}>
           <Audio src={staticFile(`/sfx/${sfxName}`)} volume={0.8} />
         </Sequence>
       )}
 
-      {/* ZONE DU HAUT (Texte qui monte) */}
+      {/* ZONE DU HAUT (Texte) */}
       <div style={{
         position: 'absolute',
         width: '100%',
@@ -104,24 +122,25 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content }) => {
         justifyContent: 'center',
         alignItems: 'center',
         transform: `translateY(${translateY}%) scale(${dynamicScale})`,
-        opacity: frame < delay ? 0 : 1,
+        opacity: entrance,
       }}>
         <div style={{ width: '90%', height: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           {renderZone(content.topContent, lottieTop, false)}
         </div>
       </div>
 
-      {/* ZONE DU BAS (Média qui apparaît après le shift) */}
+      {/* ZONE DU BAS (Média) */}
       <div style={{
         position: 'absolute',
-        bottom: '15%',
+        bottom: '12%',
         width: '100%',
-        height: '40%',
+        height: '42%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '0 60px',
-        opacity: frame < shiftDelay + 5 ? 0 : 1,
+        opacity: shift,
+        transform: `translateY(${interpolate(shift, [0, 1], [30, 0])}px)`
       }}>
         <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           {renderZone(content.bottomContent, lottieBottom, true)}

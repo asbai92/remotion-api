@@ -9,24 +9,28 @@ interface SplitProps {
   content: {
     topContent?: { media?: string; texte?: string; mots_cles?: string[] };
     bottomContent?: { media?: string; texte?: string; mots_cles?: string[] };
-    mots_cles?: string[]; // Fallback global
+    mots_cles?: string[];
   };
+  durationInSeconds?: number;
 }
 
-export const SplitMediaTop: React.FC<SplitProps> = ({ content }) => {
+export const SplitMediaTop: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
-  const delay = 30;
-  const shiftDelay = delay + 50;
+  const totalFrames = durationInSeconds * fps;
 
-  // Animation Image (Haut)
+  // DELAIS
+  const delay = 10; 
+  // On fait remonter le média plus tôt (20% de la durée) pour libérer le bas de l'écran
+  const shiftDelay = Math.floor(totalFrames * 0.2); 
+
+  // Animations
   const entrance = spring({ frame: frame - delay, fps, config: { damping: 12, stiffness: 100, mass: 0.8 } });
   const shift = spring({ frame: frame - shiftDelay, fps, config: { damping: 15, stiffness: 80 } });
 
-  const dynamicScale = interpolate(shift, [0, 1], [entrance, 0.8]);
-  const translateY = interpolate(shift, [0, 1], [0, -15]);
+  const dynamicScale = interpolate(shift, [0, 1], [entrance, 0.75]);
+  const translateY = interpolate(shift, [0, 1], [0, -18]);
 
-  // États pour les Lotties
   const [lottieTop, setLottieTop] = useState<LottieAnimationData | null>(null);
   const [lottieBottom, setLottieBottom] = useState<LottieAnimationData | null>(null);
 
@@ -45,34 +49,46 @@ export const SplitMediaTop: React.FC<SplitProps> = ({ content }) => {
 
   const renderZone = (zone: { media?: string; texte?: string; mots_cles?: string[] } | undefined, lottieData: any, isBottom: boolean) => {
     if (!zone) return null;
-
-    // Récupération des mots clés spécifiques à la zone ou globaux
     const zoneKeywords = zone.mots_cles || content.mots_cles || [];
 
-    // Priorité au TEXTE s'il n'y a pas de média
     if (zone.texte && !zone.media) {
+      // AJUSTEMENT CRUCIAL :
+      // On force la fin de l'écriture à 60% de la durée de la séquence.
+      // Le spectateur aura donc les 40% restants pour lire le texte fixe.
+      const startFrame = isBottom ? shiftDelay + 10 : delay + 10;
+      const writingEndFrame = totalFrames * 0.60; 
+      
+      const availableFrames = Math.max(20, writingEndFrame - startFrame);
+      const idealSpeed = zone.texte.length / availableFrames;
+
       return (
         <Typewriter 
           text={zone.texte} 
           keywords={zoneKeywords}
-          delay={isBottom ? shiftDelay + 20 : delay + 10}
+          delay={startFrame}
+          speed={idealSpeed}
           baseStyle={{
             fontFamily: THEME.typography.fontFamily,
-            fontSize: THEME.typography.fontSize.title * 0.7,
+            fontSize: THEME.typography.fontSize.title * 0.65,
             textAlign: 'center',
             fontWeight: 900,
             color: 'white',
             textTransform: 'uppercase',
-            textShadow: '0px 0px 15px rgba(0,0,0,0.7)'
+            textShadow: '0px 5px 20px rgba(0,0,0,0.6)',
+            width: '100%'
           }}
         />
       );
     }
 
-    // Priorité au MÉDIA
     if (zone.media) {
       const finalUrl = zone.media.startsWith('http') ? zone.media : staticFile(zone.media);
-      const style: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'contain' };
+      const style: React.CSSProperties = { 
+        width: '100%', 
+        height: '100%', 
+        objectFit: 'contain',
+        filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.4))'
+      };
       
       const pathLower = zone.media.toLowerCase();
       if (pathLower.endsWith('.mp4')) return <OffthreadVideo src={finalUrl} style={style} />;
@@ -83,7 +99,6 @@ export const SplitMediaTop: React.FC<SplitProps> = ({ content }) => {
     return null;
   };
 
-  // SFX basé sur le média du haut
   const sfxName = LOTTIE_SFX_MAP[(content.topContent?.media || "").replace('.json', '')] || LOTTIE_SFX_MAP['generic'];
 
   return (
@@ -92,7 +107,6 @@ export const SplitMediaTop: React.FC<SplitProps> = ({ content }) => {
         <Audio src={staticFile(`/sfx/${sfxName}`)} volume={0.8} />
       </Sequence>
 
-      {/* ZONE DU HAUT (topContent) */}
       <div style={{
         position: 'absolute',
         width: '100%',
@@ -101,24 +115,24 @@ export const SplitMediaTop: React.FC<SplitProps> = ({ content }) => {
         justifyContent: 'center',
         alignItems: 'center',
         transform: `translateY(${translateY}%) scale(${dynamicScale})`,
-        opacity: frame < delay ? 0 : 1,
+        opacity: entrance,
       }}>
-        <div style={{ width: '80%', height: '60%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ width: '85%', height: '60%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           {renderZone(content.topContent, lottieTop, false)}
         </div>
       </div>
 
-      {/* ZONE DU BAS (bottomContent) */}
       <div style={{
         position: 'absolute',
-        bottom: '8%',
+        bottom: '10%',
         width: '100%',
-        height: '40%',
+        height: '35%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '0 60px',
-        opacity: frame < shiftDelay + 10 ? 0 : 1,
+        opacity: shift,
+        transform: `translateY(${interpolate(shift, [0, 1], [20, 0])}px)`
       }}>
         {renderZone(content.bottomContent, lottieBottom, true)}
       </div>

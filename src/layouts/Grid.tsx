@@ -9,15 +9,19 @@ interface GridProps {
     medias?: string[];
     points?: string[];
   };
+  durationInSeconds?: number;
 }
 
-export const Grid: React.FC<GridProps> = ({ content }) => {
+export const Grid: React.FC<GridProps> = ({ content, durationInSeconds = 5 }) => {
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const items = content.medias || [];
 
-  const entranceDelay = 20;
-  const stagger = 12;
+  // CONFIGURATION DU RYTHME
+  const entranceDelay = 15;
+  const totalFrames = durationInSeconds * fps;
+  // On calcule l'écart entre chaque élément pour qu'ils rentrent tous avant la fin (80% de la durée)
+  const stagger = Math.min(12, Math.floor((totalFrames * 0.8 - entranceDelay) / items.length));
 
   const [lotties, setLotties] = useState<{[key: number]: LottieAnimationData | null}>({});
 
@@ -48,12 +52,11 @@ export const Grid: React.FC<GridProps> = ({ content }) => {
 
   const titleEntrance = spring({ frame: frame - 10, fps, config: { damping: 12 } });
 
-  // LOGIQUE DE GRILLE AMÉLIORÉE
   const getGridConfig = () => {
     const count = items.length;
     if (count <= 3) return `repeat(${count}, 1fr)`; 
     if (count === 4) return 'repeat(2, 1fr)';
-    return 'repeat(3, 1fr)'; // Pour 5, 6 éléments ou plus : 3 colonnes
+    return 'repeat(3, 1fr)';
   };
 
   return (
@@ -68,8 +71,9 @@ export const Grid: React.FC<GridProps> = ({ content }) => {
           fontWeight: 900,
           color: THEME.colors.accent,
           textAlign: 'center',
-          marginBottom: '30px',
-          textTransform: 'uppercase'
+          marginBottom: '40px',
+          textTransform: 'uppercase',
+          textShadow: '0 5px 15px rgba(0,0,0,0.3)'
         }}>
           {content.titre}
         </div>
@@ -78,7 +82,7 @@ export const Grid: React.FC<GridProps> = ({ content }) => {
       <div style={{
         display: 'grid',
         gridTemplateColumns: getGridConfig(),
-        gap: items.length > 4 ? '25px' : '40px', // On réduit l'espace si beaucoup d'éléments
+        gap: items.length > 4 ? '25px' : '40px',
         width: '100%',
         maxWidth: '1200px', 
         margin: '0 auto',
@@ -87,50 +91,59 @@ export const Grid: React.FC<GridProps> = ({ content }) => {
       }}>
         {items.map((item, i) => {
           const delay = entranceDelay + (i * stagger);
-          const spr = spring({ frame: frame - delay, fps, config: { damping: 12 } });
-          const direction = i % 2 === 0 ? -150 : 150;
+          const spr = spring({ frame: frame - delay, fps, config: { damping: 12, stiffness: 100 } });
+          
+          // Animation de sortie optionnelle (fondu à la fin)
+          const exitOpacity = interpolate(frame, [totalFrames - 10, totalFrames], [1, 0], { extrapolateLeft: 'clamp' });
+          
+          const direction = i % 2 === 0 ? -100 : 100;
           const translateY = interpolate(spr, [0, 1], [direction, 0]);
+          const scale = interpolate(spr, [0, 1], [0.5, 1]);
 
           return (
             <div key={i} style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              opacity: spr,
-              transform: `translateY(${translateY}px)`,
+              opacity: spr * exitOpacity,
+              transform: `translateY(${translateY}px) scale(${scale})`,
               width: '100%',
-              // AJUSTEMENT DYNAMIQUE DU MAX-WIDTH
               maxWidth: items.length > 4 ? '320px' : (items.length <= 2 ? '450px' : '380px')
             }}>
               <div style={{
                 width: '100%',
                 aspectRatio: '1/1',
                 backgroundColor: 'rgba(255,255,255,0.05)',
-                border: `3px solid ${THEME.colors.accent}`,
-                borderRadius: items.length > 4 ? '15px' : '25px', // Coins plus doux si petits
+                border: `4px solid ${THEME.colors.accent}`,
+                borderRadius: items.length > 4 ? '15px' : '25px',
                 overflow: 'hidden',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                boxShadow: '0 15px 35px rgba(0,0,0,0.4)',
+                position: 'relative'
               }}>
                 {renderItemMedia(item, i)}
               </div>
 
               {content.points && content.points[i] && (
                 <div style={{
-                  marginTop: '10px',
+                  marginTop: '15px',
                   color: 'white',
                   fontFamily: THEME.typography.fontFamily,
-                  fontSize: items.length > 4 ? '18px' : '24px', // Texte plus petit si 6 éléments
+                  fontSize: items.length > 4 ? '18px' : '24px',
                   fontWeight: 800,
                   textAlign: 'center',
-                  textTransform: 'uppercase'
+                  textTransform: 'uppercase',
+                  padding: '5px 15px',
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  borderRadius: '10px'
                 }}>
                   {content.points[i]}
                 </div>
               )}
 
+              {/* Synchronisation SFX */}
               <Sequence from={delay}>
                 <Audio src={staticFile('/sfx/pop.mp3')} volume={0.4} />
               </Sequence>

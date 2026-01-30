@@ -1,35 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { AbsoluteFill, useCurrentFrame, staticFile, Audio, spring, useVideoConfig, Sequence, Img, OffthreadVideo } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, staticFile, Audio, spring, useVideoConfig, Sequence, Img, OffthreadVideo, interpolate } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
 
 interface ConceptProps {
   content: {
-    // Changement ici : 'lottie' devient 'media' pour matcher ton nouveau schéma
     media?: string; 
   };
+  durationInSeconds?: number;
 }
 
-export const Concept: React.FC<ConceptProps> = ({ content }) => {
+export const Concept: React.FC<ConceptProps> = ({ content, durationInSeconds = 5 }) => {
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
-  const delay = 30; 
+  const delay = 20; 
   
-  // On récupère 'media' au lieu de 'lottie'
   const assetPath = content?.media || "";
   const [lottieData, setLottieData] = useState<LottieAnimationData | null>(null);
 
-  // Animation de zoom
-  const scale = spring({
+  const totalFrames = durationInSeconds * fps;
+
+  // Animation d'entrée (Zoom + Rebond)
+  const scaleEntrance = spring({
     frame: frame - delay,
     fps,
     config: { damping: 12, stiffness: 100, mass: 0.8 },
   });
 
+  // Petit mouvement de respiration continu sur toute la durée
+  const breathScale = interpolate(
+    frame,
+    [0, totalFrames],
+    [1, 1.08], // Grossit très légèrement de 8% sur la durée totale
+    { extrapolateRight: 'clamp' }
+  );
+
   useEffect(() => {
     if (!assetPath) return;
 
-    // Détection si c'est un Lottie
     const isLottie = !assetPath.toLowerCase().endsWith('.mp4') && 
                      !assetPath.toLowerCase().match(/\.(jpg|jpeg|png|webp|avif)$/);
 
@@ -38,11 +46,10 @@ export const Concept: React.FC<ConceptProps> = ({ content }) => {
       fetch(staticFile(`/lotties/${fileName}`))
         .then((res) => res.json())
         .then((json) => setLottieData(json))
-        .catch((err) => console.error("Erreur Lottie:", err));
+        .catch((err) => console.error("Erreur Lottie Concept:", err));
     }
   }, [assetPath]);
 
-  // Rendu dynamique
   const renderMedia = () => {
     if (!assetPath) return null;
 
@@ -92,10 +99,15 @@ export const Concept: React.FC<ConceptProps> = ({ content }) => {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        transform: `scale(${scale})`,
+        // On multiplie le spring d'entrée par le mouvement continu
+        transform: `scale(${scaleEntrance * breathScale})`,
         opacity: frame < delay ? 0 : 1 
       }}>
-        <div style={{ width: '85%', height: '85%' }}>
+        <div style={{ 
+          width: '90%', 
+          height: '90%',
+          filter: 'drop-shadow(0 20px 50px rgba(0,0,0,0.3))'
+        }}>
           {renderMedia()}
         </div>
       </div>

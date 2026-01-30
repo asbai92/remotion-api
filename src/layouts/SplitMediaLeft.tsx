@@ -11,18 +11,27 @@ interface SplitProps {
     rightContent?: { media?: string; texte?: string; mots_cles?: string[] };
     mots_cles?: string[];
   };
+  durationInSeconds?: number;
 }
 
-export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
+export const SplitMediaLeft: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   
-  const delay = 30;
-  const textDelay = delay + 15;
+  const totalFrames = durationInSeconds * fps;
+  const delay = 20; 
+  const textDelay = delay + 10;
 
-  // Animations
+  // Animations d'entrée
   const mediaEntrance = spring({ frame: frame - delay, fps, config: { damping: 12 } });
-  const textEntrance = spring({ frame: frame - textDelay, fps });
+  const textEntrance = spring({ frame: frame - textDelay, fps, config: { damping: 12 } });
+
+  const breathScale = interpolate(
+    frame,
+    [0, totalFrames],
+    [1, 1.05],
+    { extrapolateRight: 'clamp' }
+  );
 
   const [lottieTop, setLottieTop] = useState<LottieAnimationData | null>(null);
   const [lottieBottom, setLottieBottom] = useState<LottieAnimationData | null>(null);
@@ -40,24 +49,31 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
     loadLottie(content.rightContent?.media, setLottieBottom);
   }, [content.leftContent?.media, content.rightContent?.media]);
 
-  const renderZone = (zone: { media?: string; texte?: string; mots_cles?: string[] } | undefined, lottieData: any, isMedia: boolean) => {
+  const renderZone = (zone: { media?: string; texte?: string; mots_cles?: string[] } | undefined, lottieData: any) => {
     if (!zone) return null;
     const zoneKeywords = zone.mots_cles || content.mots_cles || [];
 
     if (zone.texte && !zone.media) {
+      // AJUSTEMENT : On finit d'écrire à 65% de la durée totale.
+      // Cela laisse 35% de temps de pause (environ 1.7s pour une scène de 5s)
+      const writingEndFrame = totalFrames * 0.65;
+      const availableFrames = Math.max(20, writingEndFrame - (textDelay + 10));
+      const idealSpeed = zone.texte.length / availableFrames;
+
       return (
         <Typewriter 
           text={zone.texte} 
           keywords={zoneKeywords}
           delay={textDelay + 10}
+          speed={idealSpeed}
           baseStyle={{
             fontFamily: THEME.typography.fontFamily,
-            fontSize: THEME.typography.fontSize.title * 0.7,
-            textAlign: 'right', // Aligné à droite car le texte est dans la colonne de droite
+            fontSize: THEME.typography.fontSize.title * 0.65,
+            textAlign: 'left',
             fontWeight: 900,
             color: 'white',
             textTransform: 'uppercase',
-            textShadow: '0px 0px 15px rgba(0,0,0,0.7)',
+            textShadow: '0px 5px 15px rgba(0,0,0,0.5)',
             width: '100%'
           }}
         />
@@ -66,7 +82,12 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
 
     if (zone.media) {
       const finalUrl = zone.media.startsWith('http') ? zone.media : staticFile(zone.media);
-      const style: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'contain' };
+      const style: React.CSSProperties = { 
+        width: '100%', 
+        height: '100%', 
+        objectFit: 'contain',
+        filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.3))'
+      };
       const pathLower = zone.media.toLowerCase();
       
       if (pathLower.endsWith('.mp4')) return <OffthreadVideo src={finalUrl} style={style} />;
@@ -86,7 +107,8 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '0 80px'
+      padding: '0 100px',
+      transform: `scale(${breathScale})`
     }}>
       
       {content.leftContent?.media && (
@@ -98,23 +120,27 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content }) => {
       {/* COLONNE GAUCHE (Média) */}
       <div style={{ 
         flex: 1.2, 
-        height: '60%',
+        height: '70%',
         transform: `scale(${mediaEntrance})`,
-        opacity: mediaEntrance
+        opacity: mediaEntrance,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
-        {renderZone(content.leftContent, lottieTop, true)}
+        {renderZone(content.leftContent, lottieTop)}
       </div>
 
-      {/* ESPACE ENTRE LES DEUX */}
-      <div style={{ width: 60 }} />
+      <div style={{ width: 80 }} />
 
-      {/* COLONNE DROITE (Texte) */}
+      {/* COLONNE DROITE (Texte avec pause finale) */}
       <div style={{ 
         flex: 1, 
         opacity: textEntrance,
-        transform: `translateX(${interpolate(textEntrance, [0, 1], [50, 0])}px)` 
+        transform: `translateX(${interpolate(textEntrance, [0, 1], [60, 0])}px)`,
+        display: 'flex',
+        alignItems: 'center'
       }}>
-        {renderZone(content.rightContent, lottieBottom, false)}
+        {renderZone(content.rightContent, lottieBottom)}
       </div>
 
     </AbsoluteFill>
