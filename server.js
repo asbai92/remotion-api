@@ -5,6 +5,7 @@ const { renderMedia, selectComposition } = require('@remotion/renderer');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const axios = require('axios'); // Ajouté pour les webhooks
 
 // Utilisation de ts-node pour charger le schéma TypeScript
 require('ts-node').register({ transpileOnly: true });
@@ -52,82 +53,92 @@ initBundle();
 
 // --- ROUTES ---
 
-// 1. Rendu Vidéo
+// 1. Rendu Vidéo (MODE ASYNC)
 app.post('/render', authMiddleware, async (req, res) => {
     if (!bundled) {
         return res.status(503).json({ error: "Le moteur de rendu n'est pas encore prêt." });
     }
 
-    // Vérification de la structure racine
     if (!req.body.inputProps) {
-        console.error("❌ Erreur : 'inputProps' est manquant.");
         return res.status(400).json({ 
             error: "Structure racine invalide", 
-            message: "Le JSON doit contenir une clé 'inputProps' à la racine." 
+            message: "Le JSON doit contenir une clé 'inputProps'." 
         });
     }
 
-    // CORRECTION : Validation avec le bon nom de schéma
     const result = ProjectConfigSchema.safeParse(req.body.inputProps);
     
     if (!result.success) {
-        const detailedErrors = result.error.issues.map(issue => ({
-            emplacement: issue.path.join(' -> '),
-            message: issue.message,
-            type: issue.code
-        }));
-
-        console.error("❌ Erreur de validation JSON :", JSON.stringify(detailedErrors, null, 2));
-
         return res.status(400).json({ 
             error: "Le JSON ne respecte pas le schéma", 
-            details: detailedErrors 
+            details: result.error.issues 
         });
     }
 
     const inputProps = result.data;
+    const webhookUrl = req.body.webhookUrl; // Optionnel : URL n8n pour le callback
     const requestId = Date.now();
     const outputName = `video-${requestId}.mp4`;
     const outputLocation = path.join(outDir, outputName);
 
-    try {
-        console.log(`[${requestId}] Début du rendu...`);
+    // --- RÉPONSE IMMÉDIATE À N8N ---
+    res.status(202).json({
+        success: true,
+        message: "Rendu démarré en arrière-plan",
+        requestId: requestId,
+        status: "processing"
+    });
 
-        const composition = await selectComposition({
-            serveUrl: bundled,
-            id: 'MainVideo', 
-            inputProps,
-        });
+    // --- TRAVAIL EN ARRIÈRE-PLAN ---
+    (async () => {
+        try {
+            console.log(`[${requestId}] 🎬 Rendu lancé...`);
 
-        await renderMedia({
-            codec: 'h264',
-            composition,
-            serveUrl: bundled,
-            outputLocation,
-            inputProps,
-            concurrency: os.cpus().length,
-            chromiumOptions: {
-                timeoutInMilliseconds: 60000,
-                enableMultiProcessOnLinux: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            },
-        });
+            const composition = await selectComposition({
+                serveUrl: bundled,
+                id: 'MainVideo', 
+                inputProps,
+            });
 
-        console.log(`[${requestId}] Terminé : ${outputName}`);
+            await renderMedia({
+                codec: 'h264',
+                composition,
+                serveUrl: bundled,
+                outputLocation,
+                inputProps,
+                concurrency: os.cpus().length,
+                chromiumOptions: {
+                    timeoutInMilliseconds: 120000, // Augmenté à 2min
+                    enableMultiProcessOnLinux: true,
+                    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                },
+            });
 
-        res.json({
-            success: true,
-            videoUrl: `${BASE_URL}/out/${outputName}`,
-            filename: outputName
-        });
+            const videoUrl = `${BASE_URL}/out/${outputName}`;
+            console.log(`[${requestId}] ✅ Terminé : ${outputName}`);
 
-    } catch (error) {
-        console.error(`[${requestId}] Erreur de rendu:`, error);
-        res.status(500).json({ error: error.message });
-    }
+            // --- APPEL DU WEBHOOK SI FOURNI ---
+            if (webhookUrl) {
+                console.log(`[${requestId}] 🪝 Envoi du webhook à n8n...`);
+                await axios.post(webhookUrl, {
+                    requestId,
+                    success: true,
+                    videoUrl,
+                    filename: outputName
+                }).catch(e => console.error("Erreur Webhook:", e.message));
+            }
+
+        } catch (error) {
+            console.error(`[${requestId}] ❌ Erreur différée:`, error);
+            if (webhookUrl) {
+                await axios.post(webhookUrl, { requestId, success: false, error: error.message })
+                    .catch(e => console.error("Erreur Webhook (fail case):", e.message));
+            }
+        }
+    })();
 });
 
-// 2. Gestion des fichiers
+// 2. Gestion des fichiers (Reste inchangé)
 app.get('/videos', authMiddleware, (req, res) => {
     const files = fs.readdirSync(outDir)
         .filter(f => f.endsWith('.mp4'))
@@ -149,9 +160,7 @@ app.use('/out', express.static(outDir));
 app.listen(PORT, () => {
     console.log(`
     =============================================
-    🚀 SERVEUR REMOTION PRO OPÉRATIONNEL
-    🌍 URL : ${BASE_URL}
-    📂 SORTIE : ${outDir}
+    🚀 SERVEUR REMOTION ASYNC OPÉRATIONNEL
     =============================================
     `);
 });
