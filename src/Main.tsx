@@ -19,6 +19,7 @@ import { SplitMediaLeft } from './layouts/SplitMediaLeft';
 import { Grid } from './layouts/Grid';
 import { TRANSITION_SFX_MAP } from './constants/assets';
 import { Comparison } from './layouts/Comparison';
+import { Diagram } from './layouts/Diagram';
 
 const TRANSITIONS = [
   { name: 'slide', component: () => slide() },
@@ -75,6 +76,7 @@ export const Main: React.FC<ProjectConfig> = ({ scenes }) => {
               {scene.layout === 'GRID' && <Grid content={scene.content} />}
               {/* COMPARISON LAYOUT */}
               {scene.layout === 'COMPARISON' && <Comparison content={scene.content} />}
+              {scene.layout === 'DIAGRAM' && <Diagram content={scene.content} durationInSeconds={scene.duree_vo} />}
               
               {/* AUDIO VOIX OFF (UNIQUEMENT SI PRÉSENT) */}
               {scene.audio_voix_off && (

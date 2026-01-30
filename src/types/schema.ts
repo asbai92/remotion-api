@@ -13,6 +13,7 @@ export const LayoutSchema = z.enum([
   'TALKING_HEAD',
   'QUOTE',
   'COMPARISON',
+  'DIAGRAM',
 ]);
 
 // Schéma pour le contenu d'une scène
@@ -24,6 +25,7 @@ const SceneContentSchema = z.object({
   points: z.array(z.string()).optional(),
   citation: z.string().optional(),
   auteur: z.string().optional(),
+  code: z.string().optional(),
 
   media: z.string().optional(), 
   medias: z.array(z.string()).optional(),
