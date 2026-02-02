@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, staticFile, OffthreadVideo, Img, spring, interpolate, Sequence, Audio } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
-import { Typewriter } from '../components/Typewriter';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
-
-// 1. Import du hook pour le thème dynamique
 import { useTheme } from '../context/ThemeContext';
 
 interface SplitProps {
@@ -17,16 +14,15 @@ interface SplitProps {
 }
 
 export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
-  const theme = useTheme(); // 2. Accès au thème
+  const theme = useTheme();
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const totalFrames = durationInSeconds * fps;
   
   const delay = 15;
   const shiftDelay = Math.floor(totalFrames * 0.60);
-  const writingEndFrameTop = Math.max(delay + 20, shiftDelay - fps);
 
-  // Animations
+  // Animations de structure
   const entrance = spring({ frame: frame - delay, fps, config: { damping: 12, stiffness: 100 } });
   const shift = spring({ frame: frame - shiftDelay, fps, config: { damping: 15, stiffness: 80 } });
 
@@ -53,33 +49,60 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds 
     if (!zone) return null;
     const zoneKeywords = zone.mots_cles || content.mots_cles || [];
 
+    // --- ANIMATION WORD POP ---
     if (zone.texte && !zone.media) {
-      const startFrame = isBottom ? shiftDelay + 15 : delay + 10;
-      const writingEndFrame = isBottom ? totalFrames * 0.95 : writingEndFrameTop; 
-      const availableFrames = Math.max(20, writingEndFrame - startFrame);
-      const idealSpeed = zone.texte.length / availableFrames;
+      const words = zone.texte.split(' ');
+      const startFrame = isBottom ? shiftDelay + 10 : delay + 10;
 
       return (
-        <Typewriter 
-          text={zone.texte} 
-          keywords={zoneKeywords}
-          delay={startFrame}
-          speed={idealSpeed}
-          // 3. Application du thème
-          baseStyle={{
-            fontFamily: theme.typography.fontFamily,
-            fontSize: theme.typography.fontSize.title * 0.75,
-            textAlign: 'center',
-            fontWeight: 900,
-            color: theme.colors.text, 
-            textTransform: 'uppercase',
-            textShadow: '0px 5px 20px rgba(0,0,0,0.6)',
-            width: '100%'
-          }}
-          highlightStyle={{
-            color: theme.colors.accent
-          }}
-        />
+        <div style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: '10px 18px', 
+          justifyContent: 'center', 
+          width: '100%' 
+        }}>
+          {/* JOUE LE SFX DOUBLE POP (Un seul fichier) AU DÉBUT DU BLOC TEXTE */}
+          <Sequence from={startFrame} layout="none">
+            <Audio 
+              src={staticFile('/sfx/double_pop.mp3')} 
+              volume={theme.audio.sfxVolume} 
+            />
+          </Sequence>
+
+          {words.map((word, i) => {
+            const wordStartFrame = startFrame + (i * 3);
+            const spr = spring({
+              frame: frame - wordStartFrame,
+              fps,
+              config: { damping: 12, stiffness: 120 }
+            });
+
+            const cleanWord = word.toUpperCase().replace(/[^A-ZÀ-Ÿ0-9]/g, "");
+            const isKeyword = zoneKeywords.some(k => {
+               const cleanK = k.toUpperCase().replace(/[^A-ZÀ-Ÿ0-9]/g, "");
+               return cleanWord.includes(cleanK) || cleanK.includes(cleanWord);
+            });
+
+            return (
+              <div
+                key={i}
+                style={{
+                  opacity: spr,
+                  transform: `scale(${interpolate(spr, [0, 1], [0.6, 1])}) translateY(${interpolate(spr, [0, 1], [15, 0])}px)`,
+                  fontFamily: theme.typography.fontFamily,
+                  fontSize: theme.typography.fontSize.title * 0.75,
+                  fontWeight: 900,
+                  color: isKeyword ? theme.colors.accent : theme.colors.text,
+                  textTransform: 'uppercase',
+                  textShadow: '0px 10px 25px rgba(0,0,0,0.5)',
+                }}
+              >
+                {word}
+              </div>
+            );
+          })}
+        </div>
       );
     }
 
@@ -96,7 +119,6 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds 
       if (pathLower.endsWith('.mp4')) return <OffthreadVideo src={finalUrl} style={style} />;
       if (lottieData) return <Lottie {...({ animationData: lottieData, frame: Math.max(0, frame - (isBottom ? shiftDelay : delay)), style } as any)} />;
       if (pathLower.match(/\.(jpg|jpeg|png|webp|avif)$/)) return <Img src={finalUrl} style={style} />;
-      return <div style={style} />;
     }
     return null;
   };
@@ -110,12 +132,12 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds 
         <Sequence from={shiftDelay}>
           <Audio 
             src={staticFile(`/sfx/${sfxName}`)} 
-            volume={theme.audio.sfxVolume} // Volume dynamique
+            volume={theme.audio.sfxVolume} 
           />
         </Sequence>
       )}
 
-      {/* ZONE DU HAUT (Texte pivot) */}
+      {/* ZONE DU HAUT (Texte pivot - Word Pop) */}
       <div style={{
         position: 'absolute',
         width: '100%',
@@ -131,7 +153,7 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds 
         </div>
       </div>
 
-      {/* ZONE DU BAS (Média secondaire) */}
+      {/* ZONE DU BAS (Média ou Texte secondaire) */}
       <div style={{
         position: 'absolute',
         bottom: '12%',

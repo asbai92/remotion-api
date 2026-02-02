@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, staticFile, OffthreadVideo, Img, spring, Sequence, Audio, interpolate } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
-import { Typewriter } from '../components/Typewriter';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
-// 1. Import du hook pour le thème dynamique
 import { useTheme } from '../context/ThemeContext';
 
 interface SplitProps {
@@ -16,19 +14,17 @@ interface SplitProps {
 }
 
 export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
-  const theme = useTheme(); // 2. Accès au thème global
+  const theme = useTheme();
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const totalFrames = durationInSeconds * fps;
   
   const delay = 15; 
   const mediaDelay = Math.floor(totalFrames * 0.6); 
-  const writingEndFrame = Math.max(delay + 20, mediaDelay - fps);
 
-  // Animations
+  // Animations globales
   const textEntrance = spring({ frame: frame - delay, fps, config: { damping: 12 } });
   const mediaEntrance = spring({ frame: frame - mediaDelay, fps, config: { damping: 12 } });
-
   const breath = interpolate(frame, [0, totalFrames], [1, 1.04]);
 
   const [lottieTop, setLottieTop] = useState<LottieAnimationData | null>(null);
@@ -51,31 +47,60 @@ export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds
     if (!zone) return null;
     const zoneKeywords = zone.mots_cles || content.mots_cles || [];
 
+    // --- ANIMATION WORD POP (ALIGNEE A GAUCHE) ---
     if (zone.texte && !zone.media) {
-      const availableFrames = Math.max(20, writingEndFrame - (delay + 10));
-      const idealSpeed = zone.texte.length / availableFrames;
-
+      const words = zone.texte.split(' ');
+      const startFrame = delay + 10;
+      
       return (
-        <Typewriter 
-          text={zone.texte} 
-          keywords={zoneKeywords}
-          delay={delay + 10}
-          speed={idealSpeed}
-          // 3. Application des styles du thème
-          baseStyle={{
-            fontFamily: theme.typography.fontFamily,
-            fontSize: theme.typography.fontSize.title * 0.65,
-            textAlign: 'left',
-            fontWeight: 900,
-            color: theme.colors.text, 
-            textTransform: 'uppercase',
-            textShadow: '0px 5px 15px rgba(0,0,0,0.5)',
-            width: '100%'
-          }}
-          highlightStyle={{
-            color: theme.colors.accent // Accentuation dynamique
-          }}
-        />
+        <div style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: '10px 18px', 
+          justifyContent: 'flex-start', 
+          width: '100%'
+        }}>
+          {/* JOUE TON SFX DOUBLE POP (Un seul fichier, une seule fois) */}
+          <Sequence from={startFrame} layout="none">
+            <Audio 
+              src={staticFile('/sfx/double_pop.mp3')} 
+              volume={theme.audio.sfxVolume} 
+            />
+          </Sequence>
+
+          {words.map((word, i) => {
+            const wordStartFrame = startFrame + (i * 3);
+            const spr = spring({
+              frame: frame - wordStartFrame,
+              fps,
+              config: { damping: 12, stiffness: 110 }
+            });
+
+            const cleanWord = word.toUpperCase().replace(/[^A-ZÀ-Ÿ0-9]/g, "");
+            const isKeyword = zoneKeywords.some(k => {
+               const cleanK = k.toUpperCase().replace(/[^A-ZÀ-Ÿ0-9]/g, "");
+               return cleanWord.includes(cleanK) || cleanK.includes(cleanWord);
+            });
+
+            return (
+              <div
+                key={i}
+                style={{
+                  opacity: spr,
+                  transform: `scale(${interpolate(spr, [0, 1], [0.6, 1])}) translateY(${interpolate(spr, [0, 1], [15, 0])}px)`,
+                  fontFamily: theme.typography.fontFamily,
+                  fontSize: theme.typography.fontSize.title * 0.65,
+                  fontWeight: 900,
+                  color: isKeyword ? theme.colors.accent : theme.colors.text,
+                  textTransform: 'uppercase',
+                  textShadow: '0px 8px 20px rgba(0,0,0,0.4)',
+                }}
+              >
+                {word}
+              </div>
+            );
+          })}
+        </div>
       );
     }
 
@@ -92,7 +117,6 @@ export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds
       if (pathLower.endsWith('.mp4')) return <OffthreadVideo src={finalUrl} style={style} />;
       if (lottieData) return <Lottie {...({ animationData: lottieData, frame: Math.max(0, frame - mediaDelay), style } as any)} />;
       if (pathLower.match(/\.(jpg|jpeg|png|webp|avif)$/)) return <Img src={finalUrl} style={style} />;
-      return <div style={style} />;
     }
     return null;
   };
@@ -116,7 +140,7 @@ export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds
         </Sequence>
       )}
 
-      {/* COLONNE GAUCHE (Texte) */}
+      {/* COLONNE GAUCHE (Texte Pop + SFX) */}
       <div style={{ 
         flex: 1, 
         opacity: textEntrance,
