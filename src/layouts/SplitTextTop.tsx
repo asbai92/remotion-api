@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, staticFile, OffthreadVideo, Img, spring, interpolate, Sequence, Audio } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
 import { Typewriter } from '../components/Typewriter';
-import { THEME } from '../constants/theme';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
+
+// 1. Import du hook pour le thème dynamique
+import { useTheme } from '../context/ThemeContext';
 
 interface SplitProps {
   content: {
@@ -15,17 +17,13 @@ interface SplitProps {
 }
 
 export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
+  const theme = useTheme(); // 2. Accès au thème
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const totalFrames = durationInSeconds * fps;
   
   const delay = 15;
-  
-  // 1. On garde le shiftDelay à 60% comme tu l'as souhaité
   const shiftDelay = Math.floor(totalFrames * 0.60);
-
-  // 2. On définit la fin de l'écriture 1 seconde (fps) AVANT le shiftDelay
-  // Si la scène est trop courte, on s'assure d'avoir au moins 15 frames de battement
   const writingEndFrameTop = Math.max(delay + 20, shiftDelay - fps);
 
   // Animations
@@ -57,10 +55,7 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds 
 
     if (zone.texte && !zone.media) {
       const startFrame = isBottom ? shiftDelay + 15 : delay + 10;
-      
-      // Utilisation du writingEndFrameTop calculé pour le texte du haut
       const writingEndFrame = isBottom ? totalFrames * 0.95 : writingEndFrameTop; 
-      
       const availableFrames = Math.max(20, writingEndFrame - startFrame);
       const idealSpeed = zone.texte.length / availableFrames;
 
@@ -70,15 +65,19 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds 
           keywords={zoneKeywords}
           delay={startFrame}
           speed={idealSpeed}
+          // 3. Application du thème
           baseStyle={{
-            fontFamily: THEME.typography.fontFamily,
-            fontSize: THEME.typography.fontSize.title * 0.75,
+            fontFamily: theme.typography.fontFamily,
+            fontSize: theme.typography.fontSize.title * 0.75,
             textAlign: 'center',
             fontWeight: 900,
-            color: 'white',
+            color: theme.colors.text, 
             textTransform: 'uppercase',
             textShadow: '0px 5px 20px rgba(0,0,0,0.6)',
             width: '100%'
+          }}
+          highlightStyle={{
+            color: theme.colors.accent
           }}
         />
       );
@@ -109,11 +108,14 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds 
       
       {content.bottomContent?.media && (
         <Sequence from={shiftDelay}>
-          <Audio src={staticFile(`/sfx/${sfxName}`)} volume={0.8} />
+          <Audio 
+            src={staticFile(`/sfx/${sfxName}`)} 
+            volume={theme.audio.sfxVolume} // Volume dynamique
+          />
         </Sequence>
       )}
 
-      {/* ZONE DU HAUT (Texte) */}
+      {/* ZONE DU HAUT (Texte pivot) */}
       <div style={{
         position: 'absolute',
         width: '100%',
@@ -129,7 +131,7 @@ export const SplitTextTop: React.FC<SplitProps> = ({ content, durationInSeconds 
         </div>
       </div>
 
-      {/* ZONE DU BAS (Média) */}
+      {/* ZONE DU BAS (Média secondaire) */}
       <div style={{
         position: 'absolute',
         bottom: '12%',

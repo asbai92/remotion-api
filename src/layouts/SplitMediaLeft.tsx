@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, staticFile, OffthreadVideo, Img, spring, Sequence, Audio, interpolate } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
 import { Typewriter } from '../components/Typewriter';
-import { THEME } from '../constants/theme';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
+
+// 1. Import du hook pour le thème dynamique
+import { useTheme } from '../context/ThemeContext';
 
 interface SplitProps {
   content: {
@@ -15,6 +17,7 @@ interface SplitProps {
 }
 
 export const SplitMediaLeft: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
+  const theme = useTheme(); // 2. Accès au thème global
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   
@@ -54,8 +57,6 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content, durationInSecond
     const zoneKeywords = zone.mots_cles || content.mots_cles || [];
 
     if (zone.texte && !zone.media) {
-      // AJUSTEMENT : On finit d'écrire à 65% de la durée totale.
-      // Cela laisse 35% de temps de pause (environ 1.7s pour une scène de 5s)
       const writingEndFrame = totalFrames * 0.65;
       const availableFrames = Math.max(20, writingEndFrame - (textDelay + 10));
       const idealSpeed = zone.texte.length / availableFrames;
@@ -66,15 +67,20 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content, durationInSecond
           keywords={zoneKeywords}
           delay={textDelay + 10}
           speed={idealSpeed}
+          // 3. Application des styles du thème
           baseStyle={{
-            fontFamily: THEME.typography.fontFamily,
-            fontSize: THEME.typography.fontSize.title * 0.65,
+            fontFamily: theme.typography.fontFamily,
+            fontSize: theme.typography.fontSize.title * 0.65,
             textAlign: 'left',
             fontWeight: 900,
-            color: 'white',
+            color: theme.colors.text, 
             textTransform: 'uppercase',
             textShadow: '0px 5px 15px rgba(0,0,0,0.5)',
             width: '100%'
+          }}
+          // On peut aussi passer l'accent pour les mots-clés
+          highlightStyle={{
+            color: theme.colors.accent
           }}
         />
       );
@@ -113,7 +119,10 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content, durationInSecond
       
       {content.leftContent?.media && (
         <Sequence from={delay}>
-          <Audio src={staticFile(`/sfx/${sfxName}`)} volume={0.8} />
+          <Audio 
+            src={staticFile(`/sfx/${sfxName}`)} 
+            volume={theme.audio.sfxVolume} // Volume SFX dynamique
+          />
         </Sequence>
       )}
 
@@ -132,7 +141,7 @@ export const SplitMediaLeft: React.FC<SplitProps> = ({ content, durationInSecond
 
       <div style={{ width: 80 }} />
 
-      {/* COLONNE DROITE (Texte avec pause finale) */}
+      {/* COLONNE DROITE (Texte) */}
       <div style={{ 
         flex: 1, 
         opacity: textEntrance,

@@ -1,11 +1,12 @@
 import React from 'react';
-import { useCurrentFrame, Audio, staticFile } from 'remotion';
-import { THEME } from '../constants/theme';
+import { useCurrentFrame, Audio, staticFile, Sequence } from 'remotion'; // Ajout de Sequence
+import { useTheme } from '../context/ThemeContext';
 
 interface TypewriterProps {
   text: string;
   keywords?: string[];
   baseStyle?: React.CSSProperties;
+  highlightStyle?: React.CSSProperties;
   speed?: number;
   delay?: number;
 }
@@ -14,15 +15,14 @@ export const Typewriter: React.FC<TypewriterProps> = ({
   text, 
   keywords = [], 
   baseStyle = {}, 
+  highlightStyle = {},
   speed = 0.7,
   delay = 30 
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   
-  // Frame relative au début de l'écriture
   const typewriterFrame = Math.max(0, frame - delay);
-  
-  // Nombre de caractères à afficher à la frame actuelle
   const totalCharactersToShow = Math.floor(typewriterFrame * speed);
 
   const renderStyledText = () => {
@@ -39,7 +39,6 @@ export const Typewriter: React.FC<TypewriterProps> = ({
 
       const partOfWordVisible = fullWord.substring(0, totalCharactersToShow - wordStart);
       
-      // Nettoyage pour comparaison avec les keywords
       const cleanFullWord = fullWord.toUpperCase().replace(/[^A-ZÀ-Ÿ0-9]/g, "");
       
       const isKeyword = keywords.some(k => {
@@ -51,10 +50,11 @@ export const Typewriter: React.FC<TypewriterProps> = ({
         <span 
           key={i} 
           style={{ 
-            color: isKeyword ? THEME.colors.accent : (baseStyle.color || '#ffffff'),
+            color: isKeyword ? theme.colors.accent : (baseStyle.color || theme.colors.text),
             margin: '0 10px',
             display: 'inline-block',
-            whiteSpace: 'pre'
+            whiteSpace: 'pre',
+            ...isKeyword ? highlightStyle : {} 
           }}
         >
           {partOfWordVisible}
@@ -70,25 +70,26 @@ export const Typewriter: React.FC<TypewriterProps> = ({
       flexWrap: 'wrap', 
       justifyContent: baseStyle.textAlign === 'left' ? 'flex-start' : 'center' 
     }}>
-      {/* LOGIQUE AUDIO : Corrigée pour les vitesses variables */}
+      {/* LOGIQUE AUDIO CORRIGÉE AVEC SEQUENCE */}
       {text.split('').map((_, index) => {
-        // On déclenche le son dès que la frame actuelle "franchit" le seuil d'apparition du caractère
-        const appearanceFrame = Math.floor(index / speed) + delay;
+        const startFrame = Math.floor(index / speed) + delay;
         
-        // On ne joue le son que sur la frame exacte du déclenchement
-        if (frame === appearanceFrame) {
-          return <Audio key={index} src={staticFile('/sfx/typing_key.mp3')} volume={0.2} />;
-        }
-        return null;
+        return (
+          <Sequence key={index} from={startFrame}>
+            <Audio 
+              src={staticFile('/sfx/typing_key.mp3')} 
+              volume={theme.audio.sfxVolume * 0.5}
+            />
+          </Sequence>
+        );
       })}
 
       {renderStyledText()}
       
-      {/* Curseur visible avec animation de clignotement */}
       {frame >= delay && (
         <span style={{ 
           opacity: Math.floor(frame / 10) % 2 === 0 ? 1 : 0,
-          color: THEME.colors.accent,
+          color: theme.colors.accent,
           marginLeft: '2px',
           fontWeight: 'bold'
         }}>|</span>

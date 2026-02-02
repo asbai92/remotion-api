@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, staticFile, OffthreadVideo, Img, spring, Sequence, Audio, interpolate } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
 import { Typewriter } from '../components/Typewriter';
-import { THEME } from '../constants/theme';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
+// 1. Import du hook pour le thème dynamique
+import { useTheme } from '../context/ThemeContext';
 
 interface SplitProps {
   content: {
@@ -15,16 +16,13 @@ interface SplitProps {
 }
 
 export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
+  const theme = useTheme(); // 2. Accès au thème global
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const totalFrames = durationInSeconds * fps;
   
   const delay = 15; 
-  
-  // 1. On règle l'arrivée du média à 60% de la durée pour laisser du temps au texte
   const mediaDelay = Math.floor(totalFrames * 0.6); 
-
-  // 2. Le texte finit d'écrire 1 seconde (fps) AVANT le média
   const writingEndFrame = Math.max(delay + 20, mediaDelay - fps);
 
   // Animations
@@ -54,7 +52,6 @@ export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds
     const zoneKeywords = zone.mots_cles || content.mots_cles || [];
 
     if (zone.texte && !zone.media) {
-      // Calcul de la vitesse pour finir à writingEndFrame
       const availableFrames = Math.max(20, writingEndFrame - (delay + 10));
       const idealSpeed = zone.texte.length / availableFrames;
 
@@ -64,15 +61,19 @@ export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds
           keywords={zoneKeywords}
           delay={delay + 10}
           speed={idealSpeed}
+          // 3. Application des styles du thème
           baseStyle={{
-            fontFamily: THEME.typography.fontFamily,
-            fontSize: THEME.typography.fontSize.title * 0.65,
+            fontFamily: theme.typography.fontFamily,
+            fontSize: theme.typography.fontSize.title * 0.65,
             textAlign: 'left',
             fontWeight: 900,
-            color: 'white',
+            color: theme.colors.text, 
             textTransform: 'uppercase',
             textShadow: '0px 5px 15px rgba(0,0,0,0.5)',
             width: '100%'
+          }}
+          highlightStyle={{
+            color: theme.colors.accent // Accentuation dynamique
           }}
         />
       );
@@ -111,11 +112,11 @@ export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds
       
       {content.rightContent?.media && (
         <Sequence from={mediaDelay}>
-          <Audio src={staticFile(`/sfx/${sfxName}`)} volume={0.8} />
+          <Audio src={staticFile(`/sfx/${sfxName}`)} volume={theme.audio.sfxVolume} />
         </Sequence>
       )}
 
-      {/* COLONNE GAUCHE (Texte qui s'écrit et attend) */}
+      {/* COLONNE GAUCHE (Texte) */}
       <div style={{ 
         flex: 1, 
         opacity: textEntrance,
@@ -126,7 +127,7 @@ export const SplitTextLeft: React.FC<SplitProps> = ({ content, durationInSeconds
 
       <div style={{ width: 60 }} />
 
-      {/* COLONNE DROITE (Média qui arrive après la pause) */}
+      {/* COLONNE DROITE (Média) */}
       <div style={{ 
         flex: 1.2, 
         height: '65%',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, interpolate } from 'remotion';
-import { THEME } from '../constants/theme';
+// Import du hook pour le thème
+import { useTheme } from '../context/ThemeContext';
 import { Typewriter } from '../components/Typewriter';
 
 interface HeroProps {
@@ -12,6 +13,7 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ content, durationInSeconds = 5 }) => {
+  const theme = useTheme(); // Accès au thème dynamique
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   
@@ -19,13 +21,10 @@ export const Hero: React.FC<HeroProps> = ({ content, durationInSeconds = 5 }) =>
   const keywords = content?.keywords || [];
   const totalFrames = durationInSeconds * fps;
   
-  // CONFIGURATION DYNAMIQUE
-  const startDelay = 20; // On commence un peu plus tôt (frame 20)
-  const writingEndFrame = totalFrames * 0.8; // On veut avoir fini d'écrire à 80% du temps
+  const startDelay = 20;
+  const writingEndFrame = totalFrames * 0.8;
   const availableFrames = writingEndFrame - startDelay;
   
-  // Calcul de la vitesse : caractères / frames disponibles
-  // Si le texte fait 50 caractères et on a 100 frames, speed = 0.5
   const idealSpeed = text.length / availableFrames;
 
   const scale = interpolate(
@@ -45,17 +44,22 @@ export const Hero: React.FC<HeroProps> = ({ content, durationInSeconds = 5 }) =>
       <Typewriter 
         text={text} 
         keywords={keywords}
-        speed={idealSpeed} // On injecte la vitesse calculée
-        delay={startDelay} // On injecte le délai
+        speed={idealSpeed}
+        delay={startDelay}
+        // Utilisation des propriétés du thème pour le style
         baseStyle={{
-          fontFamily: THEME.typography.fontFamily,
-          fontSize: THEME.typography.fontSize.title,
+          fontFamily: theme.typography.fontFamily,
+          fontSize: theme.typography.fontSize.title,
           textAlign: 'center',
           fontWeight: 900,
           lineHeight: 1.1,
           textTransform: 'uppercase',
-          color: 'white',
+          color: theme.colors.text, // Couleur de texte dynamique
           textShadow: '0 10px 30px rgba(0,0,0,0.5)',
+        }}
+        // Optionnel : si ton Typewriter supporte un style pour les mots-clés
+        highlightStyle={{
+          color: theme.colors.accent,
         }}
       />
     </AbsoluteFill>

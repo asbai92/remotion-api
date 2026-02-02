@@ -28,7 +28,7 @@ export const RemotionRoot: React.FC = () => {
         }}
         defaultProps={{
           config_globale: {
-            theme: "dark_night"
+            theme: "youtube_videos"
           },
           scenes: []
         } as ProjectConfig}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, spring, interpolate, Sequence, Audio, staticFile } from 'remotion';
-import { THEME } from '../constants/theme';
+// Import du hook
+import { useTheme } from '../context/ThemeContext';
 
 interface ListProps {
   content: {
@@ -11,19 +12,17 @@ interface ListProps {
 }
 
 export const List: React.FC<ListProps> = ({ content, durationInSeconds = 5 }) => {
+  const theme = useTheme(); // Accès au thème
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const points = content.points || [];
 
-  const entranceDelay = 15; // Un peu plus rapide au début
+  const entranceDelay = 15;
   const totalFrames = durationInSeconds * fps;
 
-  // CALCUL DU STAGGER DYNAMIQUE
-  // On veut que le dernier point apparaisse au plus tard à 80% de la vidéo
   const lastPointTargetFrame = totalFrames * 0.8;
   const availableFramesForPoints = lastPointTargetFrame - (entranceDelay + 20);
   
-  // On calcule l'écart entre chaque point (minimum 10 frames pour garder de la lisibilité)
   const stagger = points.length > 1 
     ? Math.max(10, Math.floor(availableFramesForPoints / (points.length - 1)))
     : 15;
@@ -46,15 +45,15 @@ export const List: React.FC<ListProps> = ({ content, durationInSeconds = 5 }) =>
       {content.titre && (
         <>
           <Sequence from={entranceDelay}>
-            <Audio src={staticFile('/sfx/pop.mp3')} volume={0.6} />
+            <Audio src={staticFile('/sfx/pop.mp3')} volume={theme.audio.sfxVolume} />
           </Sequence>
           <div style={{
             opacity: titleEntrance,
             transform: `translateY(${interpolate(titleEntrance, [0, 1], [-40, 0])}px)`,
-            fontFamily: THEME.typography.fontFamily,
-            fontSize: THEME.typography.fontSize.title * 0.8,
+            fontFamily: theme.typography.fontFamily,
+            fontSize: theme.typography.fontSize.title * 0.8,
             fontWeight: 900,
-            color: THEME.colors.accent,
+            color: theme.colors.accent, // Couleur d'accent du thème
             textTransform: 'uppercase',
             textAlign: 'center',
             textShadow: '0px 5px 15px rgba(0,0,0,0.7)',
@@ -66,7 +65,7 @@ export const List: React.FC<ListProps> = ({ content, durationInSeconds = 5 }) =>
         </>
       )}
 
-      {/* CONTENEUR DE LISTE AUTO-AJUSTABLE */}
+      {/* CONTENEUR DE LISTE */}
       <div style={{ 
         flex: 1, 
         display: 'flex', 
@@ -75,7 +74,6 @@ export const List: React.FC<ListProps> = ({ content, durationInSeconds = 5 }) =>
         marginTop: '20px', 
       }}>
         {points.map((point, i) => {
-          // Chaque point a son propre délai basé sur le stagger calculé
           const pointDelay = entranceDelay + 20 + (i * stagger);
           
           const spr = spring({
@@ -84,7 +82,6 @@ export const List: React.FC<ListProps> = ({ content, durationInSeconds = 5 }) =>
             config: { stiffness: 100, damping: 12 }
           });
 
-          // Petit effet de balancement latéral
           const translateX = interpolate(spr, [0, 1], [-60, 0]);
           const scale = interpolate(spr, [0, 1], [0.8, 1]);
 
@@ -96,31 +93,31 @@ export const List: React.FC<ListProps> = ({ content, durationInSeconds = 5 }) =>
               transform: `translateX(${translateX}px) scale(${scale})`,
               marginBottom: '15px'
             }}>
-              {/* Puce colorée */}
+              {/* Puce colorée dynamique */}
               <div style={{
                 width: '60px',
                 height: '60px',
                 borderRadius: '50%',
-                border: `4px solid ${THEME.colors.accent}`, 
+                border: `4px solid ${theme.colors.accent}`, 
                 marginRight: '40px',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                color: THEME.colors.accent,
+                color: theme.colors.accent,
                 fontSize: '32px',
                 fontWeight: 'bold',
                 flexShrink: 0,
                 backgroundColor: 'rgba(0,0,0,0.4)',
                 boxShadow: '0px 10px 25px rgba(0,0,0,0.3)',
-                textShadow: '0px 2px 10px rgba(0,0,0,0.5)'
+                textShadow: `0px 2px 10px ${theme.colors.accent}44` // Petit glow de la couleur d'accent
               }}>
                 ✓
               </div>
 
               <div style={{
-                fontFamily: THEME.typography.fontFamily,
-                fontSize: points.length > 5 ? '32px' : '42px', // Taille adaptative selon le nombre de points
-                color: 'white',
+                fontFamily: theme.typography.fontFamily,
+                fontSize: points.length > 5 ? '32px' : '42px', 
+                color: theme.colors.text, // Couleur de texte du thème
                 fontWeight: 800,
                 textShadow: '0px 3px 20px rgba(0,0,0,0.9)',
                 lineHeight: 1.2,
@@ -129,9 +126,12 @@ export const List: React.FC<ListProps> = ({ content, durationInSeconds = 5 }) =>
                 {point}
               </div>
 
-              {/* SFX synchronisé sur l'apparition du point */}
+              {/* SFX synchronisé */}
               <Sequence from={pointDelay}>
-                <Audio src={staticFile('/sfx/pop.mp3')} volume={0.4} />
+                <Audio 
+                  src={staticFile('/sfx/pop.mp3')} 
+                  volume={theme.audio.sfxVolume * 0.8} 
+                />
               </Sequence>
             </div>
           );

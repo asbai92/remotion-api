@@ -1,23 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, staticFile, OffthreadVideo, Img, spring, Sequence, Audio, interpolate } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
-import { THEME } from '../constants/theme';
+
+// On remplace l'import statique par le hook du contexte
+import { useTheme } from '../context/ThemeContext'; 
 
 interface ComparisonProps {
   content: {
     titre?: string;
-    medias?: string[]; // [Généralement 2 pour Avant/Après]
-    points?: string[]; // [Généralement 2 pour les textes colonnes]
+    medias?: string[]; 
+    points?: string[]; 
   };
-  durationInSeconds?: number; // Ajout de la prop durée
+  durationInSeconds?: number;
 }
 
 export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSeconds = 5 }) => {
+  const theme = useTheme(); // Récupération du thème global
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const items = content.medias || [];
   
-  // On sépare les données pour les deux colonnes
   const colLeft = { media: items[0], point: content.points?.[0] };
   const colRight = { media: items[1], point: content.points?.[1] };
 
@@ -37,7 +39,6 @@ export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSecon
     });
   }, [items]);
 
-  // Calcul de la fin de la séquence pour les sorties éventuelles
   const totalFrames = durationInSeconds * fps;
 
   const renderItemMedia = (src: string | undefined, index: number) => {
@@ -52,16 +53,12 @@ export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSecon
     return null;
   };
 
-  // Animations synchronisées sur la durée
   const spr = spring({ frame: frame - 15, fps, config: { damping: 12 } });
   const titleEntrance = spring({ frame: frame - 10, fps, config: { damping: 12 } });
 
   const renderColumn = (data: {media?: string, point?: string}, index: number, side: 'left' | 'right') => {
     const direction = side === 'left' ? -150 : 150;
-    
-    // Entrée latérale fluide
     const translateX = interpolate(spr, [0, 1], [direction, 0]);
-    // Effet de sortie optionnel (fondu à la fin du temps imparti)
     const exitOpacity = interpolate(frame, [totalFrames - 10, totalFrames], [1, 0], { extrapolateLeft: 'clamp' });
 
     return (
@@ -81,7 +78,8 @@ export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSecon
             aspectRatio: '1/1',
             maxWidth: '400px',
             backgroundColor: 'rgba(255,255,255,0.05)',
-            border: `4px solid ${THEME.colors.accent}`,
+            // Utilisation du thème dynamique pour la bordure
+            border: `4px solid ${theme.colors.accent}`,
             borderRadius: '25px',
             overflow: 'hidden',
             display: 'flex',
@@ -96,16 +94,16 @@ export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSecon
         {data.point && (
           <div style={{
             marginTop: '30px',
-            fontFamily: THEME.typography.fontFamily,
+            fontFamily: theme.typography.fontFamily,
             fontSize: '32px',
             fontWeight: 900,
             textAlign: 'center',
             textTransform: 'uppercase',
-            backgroundColor: THEME.colors.accent,
+            // Couleurs dynamiques
+            backgroundColor: theme.colors.accent,
+            color: theme.colors.background, 
             padding: '10px 30px',
             borderRadius: '50px',
-            color: '#000',
-            // Petit rebond sur le texte
             transform: `scale(${interpolate(spr, [0.8, 1], [0.5, 1], {extrapolateLeft: 'clamp'})})`
           }}>
             {data.point}
@@ -125,10 +123,10 @@ export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSecon
           top: 80,
           opacity: titleEntrance,
           transform: `translateY(${interpolate(titleEntrance, [0, 1], [-20, 0])}px)`,
-          fontFamily: THEME.typography.fontFamily,
-          fontSize: THEME.typography.fontSize.title * 0.6,
+          fontFamily: theme.typography.fontFamily,
+          fontSize: theme.typography.fontSize.title * 0.6,
           fontWeight: 900,
-          color: 'white',
+          color: theme.colors.text, // Texte dynamique
           textAlign: 'center',
           textTransform: 'uppercase',
           textShadow: '0 5px 15px rgba(0,0,0,0.5)',
@@ -147,8 +145,8 @@ export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSecon
         <div style={{
           width: '4px',
           height: interpolate(spr, [0.5, 1], [0, 80], { extrapolateLeft: 'clamp' }) + '%',
-          backgroundColor: THEME.colors.accent,
-          boxShadow: `0 0 20px ${THEME.colors.accent}`,
+          backgroundColor: theme.colors.accent,
+          boxShadow: `0 0 20px ${theme.colors.accent}`,
           position: 'relative',
           borderRadius: '10px',
           opacity: spr
@@ -158,9 +156,9 @@ export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSecon
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%) scale(' + spr + ')',
-            backgroundColor: '#000',
-            border: `3px solid ${THEME.colors.accent}`,
-            color: THEME.colors.accent,
+            backgroundColor: theme.colors.background,
+            border: `3px solid ${theme.colors.accent}`,
+            color: theme.colors.accent,
             width: '80px',
             height: '80px',
             borderRadius: '50%',
@@ -179,7 +177,10 @@ export const Comparison: React.FC<ComparisonProps> = ({ content, durationInSecon
       </div>
 
       <Sequence from={15}>
-        <Audio src={staticFile('/transitions-sfx/whoosh1.mp3')} volume={0.5} />
+        <Audio 
+          src={staticFile('/transitions-sfx/whoosh1.mp3')} 
+          volume={theme.audio.sfxVolume} // Volume SFX dynamique
+        />
       </Sequence>
     </AbsoluteFill>
   );

@@ -3,6 +3,9 @@ import { AbsoluteFill, useCurrentFrame, staticFile, Audio, spring, useVideoConfi
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
 
+// 1. Import du hook pour accéder au thème
+import { useTheme } from '../context/ThemeContext';
+
 interface ConceptProps {
   content: {
     media?: string; 
@@ -11,6 +14,9 @@ interface ConceptProps {
 }
 
 export const Concept: React.FC<ConceptProps> = ({ content, durationInSeconds = 5 }) => {
+  // 2. Récupération du thème dynamique
+  const theme = useTheme();
+  
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const delay = 20; 
@@ -20,18 +26,18 @@ export const Concept: React.FC<ConceptProps> = ({ content, durationInSeconds = 5
 
   const totalFrames = durationInSeconds * fps;
 
-  // Animation d'entrée (Zoom + Rebond)
+  // Animation d'entrée
   const scaleEntrance = spring({
     frame: frame - delay,
     fps,
     config: { damping: 12, stiffness: 100, mass: 0.8 },
   });
 
-  // Petit mouvement de respiration continu sur toute la durée
+  // Mouvement de respiration
   const breathScale = interpolate(
     frame,
     [0, totalFrames],
-    [1, 1.08], // Grossit très légèrement de 8% sur la durée totale
+    [1, 1.08], 
     { extrapolateRight: 'clamp' }
   );
 
@@ -88,7 +94,8 @@ export const Concept: React.FC<ConceptProps> = ({ content, durationInSeconds = 5
         <Sequence from={delay}>
           <Audio 
             src={staticFile(`/sfx/${sfxName}`)} 
-            volume={0.8} 
+            // 3. Utilisation du volume SFX définit dans le thème
+            volume={theme.audio.sfxVolume} 
           />
         </Sequence>
       )}
@@ -99,13 +106,13 @@ export const Concept: React.FC<ConceptProps> = ({ content, durationInSeconds = 5
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        // On multiplie le spring d'entrée par le mouvement continu
         transform: `scale(${scaleEntrance * breathScale})`,
         opacity: frame < delay ? 0 : 1 
       }}>
         <div style={{ 
           width: '90%', 
           height: '90%',
+          // Optionnel : Tu pourrais aussi utiliser theme.colors.accent pour colorer l'ombre si tu veux un effet "glow"
           filter: 'drop-shadow(0 20px 50px rgba(0,0,0,0.3))'
         }}>
           {renderMedia()}

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, staticFile, OffthreadVideo, Img, spring, interpolate, Sequence, Audio } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
 import { Typewriter } from '../components/Typewriter';
-import { THEME } from '../constants/theme';
 import { LOTTIE_SFX_MAP } from '../constants/assets';
+
+// 1. Import du hook pour le thème dynamique
+import { useTheme } from '../context/ThemeContext';
 
 interface SplitProps {
   content: {
@@ -15,13 +17,13 @@ interface SplitProps {
 }
 
 export const SplitMediaTop: React.FC<SplitProps> = ({ content, durationInSeconds = 5 }) => {
+  const theme = useTheme(); // 2. Accès au thème
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const totalFrames = durationInSeconds * fps;
 
   // DELAIS
   const delay = 10; 
-  // On fait remonter le média plus tôt (20% de la durée) pour libérer le bas de l'écran
   const shiftDelay = Math.floor(totalFrames * 0.2); 
 
   // Animations
@@ -52,9 +54,6 @@ export const SplitMediaTop: React.FC<SplitProps> = ({ content, durationInSeconds
     const zoneKeywords = zone.mots_cles || content.mots_cles || [];
 
     if (zone.texte && !zone.media) {
-      // AJUSTEMENT CRUCIAL :
-      // On force la fin de l'écriture à 60% de la durée de la séquence.
-      // Le spectateur aura donc les 40% restants pour lire le texte fixe.
       const startFrame = isBottom ? shiftDelay + 10 : delay + 10;
       const writingEndFrame = totalFrames * 0.60; 
       
@@ -67,15 +66,19 @@ export const SplitMediaTop: React.FC<SplitProps> = ({ content, durationInSeconds
           keywords={zoneKeywords}
           delay={startFrame}
           speed={idealSpeed}
+          // 3. Application des styles du thème
           baseStyle={{
-            fontFamily: THEME.typography.fontFamily,
-            fontSize: THEME.typography.fontSize.title * 0.65,
+            fontFamily: theme.typography.fontFamily,
+            fontSize: theme.typography.fontSize.title * 0.65,
             textAlign: 'center',
             fontWeight: 900,
-            color: 'white',
+            color: theme.colors.text, 
             textTransform: 'uppercase',
             textShadow: '0px 5px 20px rgba(0,0,0,0.6)',
             width: '100%'
+          }}
+          highlightStyle={{
+            color: theme.colors.accent // Accentuation dynamique
           }}
         />
       );
@@ -104,9 +107,13 @@ export const SplitMediaTop: React.FC<SplitProps> = ({ content, durationInSeconds
   return (
     <AbsoluteFill style={{ backgroundColor: 'transparent' }}>
       <Sequence from={delay}>
-        <Audio src={staticFile(`/sfx/${sfxName}`)} volume={0.8} />
+        <Audio 
+          src={staticFile(`/sfx/${sfxName}`)} 
+          volume={theme.audio.sfxVolume} // Volume SFX du thème
+        />
       </Sequence>
 
+      {/* ZONE MEDIA (Haut) */}
       <div style={{
         position: 'absolute',
         width: '100%',
@@ -122,6 +129,7 @@ export const SplitMediaTop: React.FC<SplitProps> = ({ content, durationInSeconds
         </div>
       </div>
 
+      {/* ZONE TEXTE (Bas) */}
       <div style={{
         position: 'absolute',
         bottom: '10%',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, interpolate, spring, OffthreadVideo, staticFile } from 'remotion';
-import { THEME } from '../constants/theme';
+// Import du hook pour le thème
+import { useTheme } from '../context/ThemeContext';
 
 interface TalkingHeadProps {
   content: {
@@ -11,6 +12,7 @@ interface TalkingHeadProps {
 }
 
 export const TalkingHead: React.FC<TalkingHeadProps> = ({ content }) => {
+  const theme = useTheme(); // Accès au thème dynamique
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
 
@@ -36,28 +38,31 @@ export const TalkingHead: React.FC<TalkingHeadProps> = ({ content }) => {
         />
       )}
 
-      {/* OVERLAY DÉGRADÉ POUR LA LISIBILITÉ */}
+      {/* OVERLAY DÉGRADÉ DYNAMIQUE */}
+      {/* On utilise un noir profond qui tire vers la couleur d'accent très sombre si besoin */}
       <AbsoluteFill style={{
-        background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%)',
+        background: `linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%)`,
       }} />
 
-      {/* TEXTE PRINCIPAL (SOUS-TITRE STYLE) */}
+      {/* TEXTE PRINCIPAL (STYLE SOUS-TITRE PREMIUM) */}
       {content.texte_principal && (
         <div style={{
           position: 'absolute',
-          bottom: '10%',
-          left: '10%',
-          right: '10%',
+          bottom: '12%',
+          left: '8%',
+          right: '8%',
           textAlign: 'center',
           opacity: textEntrance,
-          transform: `translateY(${interpolate(textEntrance, [0, 1], [20, 0])}px)`,
-          fontFamily: THEME.typography.fontFamily,
-          fontSize: THEME.typography.fontSize.body * 1.3,
-          fontWeight: 800,
-          color: 'white',
-          textShadow: '0px 2px 15px rgba(0,0,0,0.9)',
-          lineHeight: 1.3,
+          transform: `translateY(${interpolate(textEntrance, [0, 1], [30, 0])}px)`,
+          fontFamily: theme.typography.fontFamily,
+          fontSize: theme.typography.fontSize.body * 1.4,
+          fontWeight: 900,
+          color: theme.colors.text, // Couleur du thème (souvent blanc ou très clair)
+          textShadow: '0px 4px 20px rgba(0,0,0,1)', // Ombre plus forte pour détacher du fond vidéo
+          lineHeight: 1.2,
+          textTransform: 'uppercase', // Pour garder le punch des autres layouts
         }}>
+          {/* Optionnel : Mettre un mot en couleur d'accent si nécessaire */}
           {content.texte_principal}
         </div>
       )}

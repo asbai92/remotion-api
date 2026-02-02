@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AbsoluteFill, useVideoConfig, useCurrentFrame, staticFile, OffthreadVideo, Img, spring, Sequence, Audio, interpolate } from 'remotion';
 import { Lottie, LottieAnimationData } from '@remotion/lottie';
-import { THEME } from '../constants/theme';
+
+// Import du hook pour le thème global
+import { useTheme } from '../context/ThemeContext';
 
 interface GridProps {
   content: {
@@ -13,14 +15,13 @@ interface GridProps {
 }
 
 export const Grid: React.FC<GridProps> = ({ content, durationInSeconds = 5 }) => {
+  const theme = useTheme(); // Accès au thème global
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const items = content.medias || [];
 
-  // CONFIGURATION DU RYTHME
   const entranceDelay = 15;
   const totalFrames = durationInSeconds * fps;
-  // On calcule l'écart entre chaque élément pour qu'ils rentrent tous avant la fin (80% de la durée)
   const stagger = Math.min(12, Math.floor((totalFrames * 0.8 - entranceDelay) / items.length));
 
   const [lotties, setLotties] = useState<{[key: number]: LottieAnimationData | null}>({});
@@ -62,14 +63,15 @@ export const Grid: React.FC<GridProps> = ({ content, durationInSeconds = 5 }) =>
   return (
     <AbsoluteFill style={{ padding: '40px 60px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
       
+      {/* TITRE DYNAMIQUE */}
       {content.titre && (
         <div style={{
           opacity: titleEntrance,
           transform: `translateY(${interpolate(titleEntrance, [0, 1], [-20, 0])}px)`,
-          fontFamily: THEME.typography.fontFamily,
-          fontSize: THEME.typography.fontSize.title * 0.7,
+          fontFamily: theme.typography.fontFamily,
+          fontSize: theme.typography.fontSize.title * 0.7,
           fontWeight: 900,
-          color: THEME.colors.accent,
+          color: theme.colors.accent, // Utilisation de l'accent du thème
           textAlign: 'center',
           marginBottom: '40px',
           textTransform: 'uppercase',
@@ -92,10 +94,7 @@ export const Grid: React.FC<GridProps> = ({ content, durationInSeconds = 5 }) =>
         {items.map((item, i) => {
           const delay = entranceDelay + (i * stagger);
           const spr = spring({ frame: frame - delay, fps, config: { damping: 12, stiffness: 100 } });
-          
-          // Animation de sortie optionnelle (fondu à la fin)
           const exitOpacity = interpolate(frame, [totalFrames - 10, totalFrames], [1, 0], { extrapolateLeft: 'clamp' });
-          
           const direction = i % 2 === 0 ? -100 : 100;
           const translateY = interpolate(spr, [0, 1], [direction, 0]);
           const scale = interpolate(spr, [0, 1], [0.5, 1]);
@@ -114,7 +113,8 @@ export const Grid: React.FC<GridProps> = ({ content, durationInSeconds = 5 }) =>
                 width: '100%',
                 aspectRatio: '1/1',
                 backgroundColor: 'rgba(255,255,255,0.05)',
-                border: `4px solid ${THEME.colors.accent}`,
+                // Bordure dynamique
+                border: `4px solid ${theme.colors.accent}`,
                 borderRadius: items.length > 4 ? '15px' : '25px',
                 overflow: 'hidden',
                 display: 'flex',
@@ -129,8 +129,8 @@ export const Grid: React.FC<GridProps> = ({ content, durationInSeconds = 5 }) =>
               {content.points && content.points[i] && (
                 <div style={{
                   marginTop: '15px',
-                  color: 'white',
-                  fontFamily: THEME.typography.fontFamily,
+                  color: theme.colors.text, // Texte dynamique
+                  fontFamily: theme.typography.fontFamily,
                   fontSize: items.length > 4 ? '18px' : '24px',
                   fontWeight: 800,
                   textAlign: 'center',
@@ -143,9 +143,9 @@ export const Grid: React.FC<GridProps> = ({ content, durationInSeconds = 5 }) =>
                 </div>
               )}
 
-              {/* Synchronisation SFX */}
+              {/* Synchronisation SFX avec volume dynamique */}
               <Sequence from={delay}>
-                <Audio src={staticFile('/sfx/pop.mp3')} volume={0.4} />
+                <Audio src={staticFile('/sfx/pop.mp3')} volume={theme.audio.sfxVolume} />
               </Sequence>
             </div>
           );
