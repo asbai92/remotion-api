@@ -21,12 +21,23 @@ export const Hero: React.FC<HeroProps> = ({ content, durationInSeconds = 5 }) =>
   const keywords = content?.keywords || [];
   const totalFrames = durationInSeconds * fps;
   
-  const startDelay = 20;
-  const writingEndFrame = totalFrames * 0.8;
-  const availableFrames = writingEndFrame - startDelay;
+  // --- CONFIGURATION DU TIMING ---
   
-  const idealSpeed = text.length / availableFrames;
+  // 1. Délai avant le début de l'écriture (frames)
+  const startDelay = 15; 
+  
+  // 2. Temps de pause à la fin pour la lecture (ex: 2 secondes)
+  const endPauseDurationInFrames = fps * 2; 
+  
+  // 3. Calcul de l'espace restant pour l'animation d'écriture
+  // On s'assure d'avoir au moins 1 frame pour éviter les erreurs mathématiques
+  const writingDurationInFrames = Math.max(1, totalFrames - startDelay - endPauseDurationInFrames);
+  
+  // 4. Calcul de la vitesse idéale (caractères par frame)
+  // Vitesse = (Nombre total de caractères) / (Nombre de frames allouées)
+  const idealSpeed = text.length / writingDurationInFrames;
 
+  // Animation de zoom progressif sur toute la durée
   const scale = interpolate(
     frame,
     [0, totalFrames],
@@ -44,9 +55,9 @@ export const Hero: React.FC<HeroProps> = ({ content, durationInSeconds = 5 }) =>
       <Typewriter 
         text={text} 
         keywords={keywords}
-        speed={idealSpeed}
+        speed={idealSpeed} 
         delay={startDelay}
-        // Utilisation des propriétés du thème pour le style
+        // Style basé sur le thème
         baseStyle={{
           fontFamily: theme.typography.fontFamily,
           fontSize: theme.typography.fontSize.title,
@@ -54,10 +65,9 @@ export const Hero: React.FC<HeroProps> = ({ content, durationInSeconds = 5 }) =>
           fontWeight: 900,
           lineHeight: 1.1,
           textTransform: 'uppercase',
-          color: theme.colors.text, // Couleur de texte dynamique
+          color: theme.colors.text, 
           textShadow: '0 10px 30px rgba(0,0,0,0.5)',
         }}
-        // Optionnel : si ton Typewriter supporte un style pour les mots-clés
         highlightStyle={{
           color: theme.colors.accent,
         }}
